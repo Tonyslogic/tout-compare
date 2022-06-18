@@ -9,7 +9,8 @@ This is a work in progress. Be nice! It is useful now.
 Just clone the repo and run the toutc.py script
 
 ## Using the installer
-Download the installer and execute toutc.exe
+Download the installer, install and execute toutc.exe
+You can find the download as an asset in the Releases area https://github.com/Tonyslogic/tout-compare/releases
 
 This one may need the MS VC++ redistributable...
 
