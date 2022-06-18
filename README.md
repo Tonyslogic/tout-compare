@@ -37,7 +37,7 @@ Adding will update the list
 
 Then you must edit by clicking on the named button (or delete). 
 
-The load shifting and car charging ar found here. They both work in similar ways. You need to specify when the action happens as well as the bounds of what happens. 
+The load shifting and car charging are found here. They both work in similar ways. You need to specify when the action happens as well as the bounds of what happens. 
 
 ![Scenario editing](./docs/ScenarioEdit.png)
 
@@ -50,7 +50,7 @@ Generating a profile requires some basic annual and base load data
 
 ![Basic profile data](./docs/ProfileWizard1.png)
 
-It also requires how that load is distributed by calendar month, day of week, and hour of day. The three screens are very similar. Use the sliders to specify relative usage -- accuracy is not critical. The basic idea is to capture seasonal, weekly and daily patters (we are creatures of habit). This is used to generate the 5 minute interval data required by the simulator. It works surprisingly well. Note all three distributions are required (must be saved) before generating data is enabled.
+It also requires how that load is distributed by calendar month, day of week, and hour of day. The three screens are very similar. Use the sliders to specify relative usage -- accuracy is not critical. The basic idea is to capture seasonal, weekly and daily patterns (we are creatures of habit). This is used to generate the 5 minute interval data required by the simulator. It works surprisingly well. Note all three distributions are required (must be saved) before generating data is enabled.
 
 ![Monthly distribution](./docs/ProfileWizard2.png)
 
@@ -81,3 +81,6 @@ This will after a short while render a sortable table where the costs (of each s
 
 ![Design](./docs/Design.png)
 
+# Reward & recognition
+
+If you like this, or better yet, it saves you some money please consider Starring the repository. If you are feeling generous, consider donating to a charity of you choice. My choice is https://joinourboys.org/
