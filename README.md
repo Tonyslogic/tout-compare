@@ -3,6 +3,16 @@ App that compares time of use tariffs for electricity with solar, inverter and b
 
 This is a work in progress. Be nice! It is useful now.
 
+I started this after installing solar panels, and getting a 'smart meter'. The smart meter opened up the wonerful world of, Time of Use Tariffs (TOUT). I was unable to find a comparison tool that took into account individual electricity usage, never mind the added complexity of solar panels, inverter, battery and getting paid for excess electricity generation (Feed-in tarrif). 
+
+It's now at a point where it can be useful to those:
+* Thinking about getting set up for solar generation
+* Thinking about adding to an existing solar generation installation
+* Who have a smart meter and want to compare the different supplier options
+* Wondering about how charging an electric car at home will impact the bill
+
+There is some setup involved as the data must reflect your electricity usage for the cost generation/comparison to be meaningful. Getting started is easy enough, just begin at the top and work your way down. Defaults are provided for everything except rates. These change too quickly to be included here.
+
 # Installation
 
 ## If you have python
