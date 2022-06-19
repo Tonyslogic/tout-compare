@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import sys
 import sqlite3
 from sqlite3 import Error
@@ -164,11 +165,13 @@ def _totalUseByDay(dbFile, ax):
         print(e)
     return df
 
-def display():
+def display(config):
+    global CONFIG
+    CONFIG = config
     env = {}
-    with open(CONFIG + "EnvProperties.json", 'r') as f:
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
-    dbFile = env["StorageFolder"] + env["DBFileName"]
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
     fig, axs = plt.subplots(nrows =2, ncols=2)
     fig.subplots_adjust(hspace=.45)
     

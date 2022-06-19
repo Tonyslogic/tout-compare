@@ -62,7 +62,6 @@ At this point the database contains load data (or if you used the AplhaESS integ
 At this point viewing the load distribution is possible (Show load graphs). It is not possible to simulate yet as we don't have any pricing or provider rates. These are not includes as they will quickly go out of date. Thankfully the rates editor is provided.
 
 If follows the same use pattern as for scenarios, load shifting, and car charging. Provide a name for the scenario, add and then edit.
-* Small bug workaround: Update & close after specifying the basic details at the top, otherwise they get dropped when adding new rate ranges.
 
 ![Rate editor](./docs/RateEditor.png)
 

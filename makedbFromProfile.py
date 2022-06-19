@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import sys
 import sqlite3
 from sqlite3 import Error
@@ -108,12 +109,12 @@ def _guiDBFromProfile(config, begin):
     global CONFIG
     CONFIG = config
     loadProfile = {}
-    with open(CONFIG + "EnvProperties.json", 'r') as f:
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
-    dbFile = env["StorageFolder"] + env["DBFileName"]
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
     _createDB(dbFile)
 
-    with open(env["ConfigFolder"] + "loadProfile.json") as lp:
+    with open(os.path.join(env["ConfigFolder"], "loadProfile.json")) as lp:
         loadProfile = json.load(lp)
     rows = _create_rows (loadProfile, begin)
 
@@ -123,12 +124,12 @@ def _guiDBFromProfile(config, begin):
 def main():
     env = {}
     loadProfile = {}
-    with open(CONFIG + "EnvProperties.json", 'r') as f:
+    with open(os.path.join(CONFIG,"EnvProperties.json"), 'r') as f:
         env = json.load(f)
-    dbFile = env["StorageFolder"] + env["DBFileName"]
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
     _createDB(dbFile)
 
-    with open(env["ConfigFolder"] + "loadProfile.json") as lp:
+    with open(os.path.join(env["ConfigFolder"], "loadProfile.json")) as lp:
         loadProfile = json.load(lp)
     # logger.info(f"The number of days:: {len(data[0]['statistics'])}")
     begin = input("Start date (YYYY-MM-DD): ")

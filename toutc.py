@@ -33,7 +33,7 @@ def _writeEnv():
     data["ConfigFolder"] = CONFIG
     data["DBFileName"] = DBFILE
 
-    with open(CONFIG + "EnvProperties.json", 'w') as f:
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'w') as f:
         json.dump(data, f)
     return
 
@@ -82,7 +82,7 @@ def _loadSysConfig():
     global STATUS_SYS_CONFIG
     data = {}
     try: 
-        with open(CONFIG + "SystemProperties.json", 'r') as f:
+        with open(os.path.join(CONFIG, "SystemProperties.json"), 'r') as f:
             data = json.load(f)
         STATUS_SYS_CONFIG = True
         MAIN_WINDOW['-SYS_CONFIG_STAT-'].update(value="System config found")
@@ -96,7 +96,7 @@ def _loadRates():
     global STATUS_RATES
     data = {}
     try: 
-        with open(CONFIG + "rates.json", 'r') as f:
+        with open(os.path.join(CONFIG, "rates.json"), 'r') as f:
            data = json.load(f)
         MAIN_WINDOW['-RATES_STAT-'].update(value="Found " + str(len(data)) + " pricing plans")
         STATUS_RATES = True
@@ -106,7 +106,7 @@ def _loadRates():
     return data
 
 def _updateSysConfig(data):
-    with open(CONFIG + "SystemProperties.json", 'w') as f:
+    with open(os.path.join(CONFIG, "SystemProperties.json"), 'w') as f:
         json.dump(data, f)
     return
 
@@ -174,7 +174,7 @@ def _loadBasicConfig():
     global DBFILE
     data = {}
     try: 
-        with open(CONFIG + "EnvProperties.json", 'r') as f:
+        with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
             data = json.load(f)
         STATUS_BASIC_CONFIG = True
         CONFIG = data["ConfigFolder"]
@@ -203,7 +203,7 @@ def _setStatus():
         STATUS_SCENARIOS = False
 
     try:
-        dbFile = STORAGE + DBFILE
+        dbFile = os.path.join(STORAGE, DBFILE)
         conn = sqlite3.connect(dbFile)
         cur = conn.cursor()
         cur.execute("SELECT min(Date), max(Date) FROM dailysums WHERE Load > 0")
@@ -217,7 +217,7 @@ def _setStatus():
     
     try:
         zeroed = " "
-        dbFile = STORAGE + DBFILE
+        dbFile = os.path.join(STORAGE, DBFILE)
         conn = sqlite3.connect(dbFile)
         cur = conn.cursor()
         cur.execute("SELECT min(Date), max(Date) FROM dailysums WHERE PV > 0")
@@ -249,6 +249,8 @@ def _setStatus():
 
 def _renderLoadShift(loadShift):
     left_col = []
+    left_col.append([sg.Text('Load shifting is charging a battery when electricity prices are lower and using the battery when prices are higher. Load shifting is most useful when solar generation is low. Load shifting can be configured several times. Each configuration (time and charge) is applied in the months slected.', size=(150,2))])
+    left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     for i, shift in enumerate(loadShift):
         left_col.append([
             sg.Text('Begin charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-LS_BEGIN' + str(i), default_text=shift["begin"]),
@@ -271,7 +273,8 @@ def _renderLoadShift(loadShift):
             sg.Checkbox('Dec', size=(5,1), default=12 in shift["months"], key='-LS_MONTH_C' + str(i)),
         ])
         left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
-    left_col.append([sg.Button('Add', key='-ADD_LS-'), sg.Button('Update', key='-UPDATE_LS-')])
+    left_col.append([sg.Button('Add a load shift configuration', key='-ADD_LS-')]),
+    left_col.append([sg.Button('Done editing load shift', key='-UPDATE_LS-')])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Load shift editor', layout,resizable=True)
         
@@ -284,14 +287,14 @@ def _editLoadShift(loadShift):
         # print(event)
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if event == '-ADD_LS-': 
-            loadShift.append({"stop at": 80, "begin": 2, "end": 4, "months": []})
+            loadShift.append({"stop at": 80, "begin": 2, "end": 4, "months": [1,2,3,4,5,6,7,8,9,10,11,12]})
             lsWindow.close()
             lsWindow = _renderLoadShift(loadShift)
         if event == '-UPDATE_LS-':
             newLoadShift = []
             for i, _ in enumerate(loadShift):
                 shift = {}
-                months = []
+                months = [1,2,3,4,5,6,7,8,9,10,11,12]
                 # print (values)
                 for key, value in values.items():
                     if str(key).endswith(str(i)):
@@ -314,6 +317,8 @@ def _editLoadShift(loadShift):
 
 def _renderCarCharge(carCharge):
     left_col = []
+    left_col.append([sg.Text('Car charging allows you to explore the impacts of charging a car at various times. Times, days and months are used to apply additional load. The additional load is specified in KWH. In the future, diverters (automatically use surplus solar) may be added.', size=(150,2))])
+    left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     for i, charge in enumerate(carCharge):
         left_col.append([
             sg.Text('Begin charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_BEGIN' + str(i), default_text=charge["begin"]),
@@ -346,7 +351,8 @@ def _renderCarCharge(carCharge):
             sg.Checkbox('Sat', size=(5,1), default=6 in charge["days"], key='-CC_DAY_6' + str(i))
         ])
         left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
-    left_col.append([sg.Button('Add', key='-ADD_CC-'), sg.Button('Update', key='-UPDATE_CC-')])
+    left_col.append([sg.Button('Add another car charging schedule entry', key='-ADD_CC-')])
+    left_col.append([sg.Button('Done editing the car charge schedule', key='-UPDATE_CC-')])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Car charge load editor', layout,resizable=True)
         
@@ -361,15 +367,15 @@ def _editCarCharge(carCharge):
         # print(event)
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if event == '-ADD_CC-': 
-            carCharge.append({"draw": 7.5, "begin": 2, "end": 4, "months": [], "days": []})
+            carCharge.append({"draw": 7.5, "begin": 2, "end": 4, "months": [1,2,3,4,5,6,7,8,9,10,11,12], "days": [0,1,2,3,4,5,6]})
             ccWindow.close()
             ccWindow = _renderCarCharge(carCharge)
         if event == '-UPDATE_CC-':
             newCarCharge = []
             for i, _ in enumerate(carCharge):
                 charge = {}
-                months = []
-                days = []
+                months = [1,2,3,4,5,6,7,8,9,10,11,12]
+                days = [0,1,2,3,4,5,6]
                 # print (values)
                 for key, value in values.items():
                     if str(key).endswith(str(i)):
@@ -404,12 +410,15 @@ def _renderOneScenario(scenario):
         pan = 14
         stop = 19.6
     left_col = [
+            [sg.Text('A what-if scenaio describes additional load and variations to the solar/inverter configuration. Scenarios are visible in the simulation output. Load shifting and Car charging are not mandatory.', size=(50,3))],
+            [sg.Text('===================================================', size=(50,1))],
             [sg.Text('Name', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-SCENARIO_NAME-', default_text=scenario["Name"])],
             [sg.Text('Battery size (KWH)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-SCENARIO_BATTERY-', default_text=bat)],
             [sg.Text('Number of panels', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-SCENARIO_PANELS-', default_text=pan)],
             [sg.Text('Discharge stop (%)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-DISCHARGE_STOP-', default_text=stop)],
             [sg.Button("Load shifting", size=(24,1), key='-EDIT_LOAD_SHIFT-'), sg.Button("Car charging", size=(24,1), key='-EDIT_CAR_CHARGING-')],
-            [sg.Button('Update', key='-UPDATE_SCENARIO-')]
+            [sg.Text('===================================================', size=(50,1))],
+            [sg.Button('Done editing scenario', key='-UPDATE_SCENARIO-')]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Scenario editor', layout,resizable=True)
@@ -444,7 +453,13 @@ def _editScenario(scenario):
     return scenario
 
 def _renderScenarioNav(scenarios):
+    saveDisabled = False
     left_col = []
+    left_col.append([sg.Text('At least one what-if scenario is needed. Click on a scenario to edit. Delete operates on the scenario in the same row', size=(50,2))])
+    left_col.append([sg.Text('===================================================', size=(50,1))])
+    if len(scenarios) == 0:
+        left_col.append([sg.Text('There are no scenarios defined yet.', size=(50,1))])
+        saveDisabled = True
     for i, scenario in enumerate(scenarios):
         name = scenario["Name"]
         deleteKey = '-DELETE_SCENARIO_'+ str(i) +'-'
@@ -452,8 +467,9 @@ def _renderScenarioNav(scenarios):
             [sg.Button(name, size=(24,1), key='-EDIT_SCENARIO_'+ str(i) +'-'), sg.Button("Delete", size=(24,1), key=deleteKey)]
         )
     left_col.append([])
-    left_col.append([sg.Button('Add', size=(24,1), key='-ADD_SCENARIO-'), sg.In(size=(24,1), enable_events=True ,key='-NEW_SCENARIO_NAME-', default_text="New scenario")])
-    left_col.append([sg.Button('OK', size=(24,1), key='-SAVE_SCENARIOS-')])
+    left_col.append([sg.Text('===================================================', size=(50,1))])
+    left_col.append([sg.Button('Add a new scenario', size=(24,1), key='-ADD_SCENARIO-'), sg.In(size=(24,1), enable_events=True ,key='-NEW_SCENARIO_NAME-', default_text="<New scenario name>")])
+    left_col.append([sg.Button('Save scenarios', size=(24,1), key='-SAVE_SCENARIOS-', disabled=saveDisabled)])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Scenario navigation', layout,resizable=True)
     return window
@@ -555,7 +571,7 @@ def _renderMonthlyDist(distribution):
     sliderrows = _getSliderRows(distribution)
     left_col = [[sg.Text("Use the sliders to indicate how load is used the relative to the months of the year. For example if you use electric heating the load will likely be higher in the colder months of the year.", size=(80,3))]]
     left_col.extend(sliderrows)
-    left_col.extend([[sg.Button('Save distribution', size=(30,1), key='-SAVE_MONTHLY-')]])
+    left_col.extend([[sg.Button('Update distribution', size=(30,1), key='-SAVE_MONTHLY-')]])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Monthly distribution', layout,resizable=True)
     return window
@@ -580,7 +596,7 @@ def _renderDOWDist(dowdDist):
     sliderrows = _getSliderRows(dowdDist)
     left_col = [[sg.Text("Use the sliders to indicate how load is used the relative to the days of the year. For example if you use batch cook at the weekend load will be higher on Saturday and Sunday.", size=(80,3))]]
     left_col.extend(sliderrows)
-    left_col.extend([[sg.Button('Save distribution', size=(30,1), key='-SAVE_DOWD-')]])
+    left_col.extend([[sg.Button('Update distribution', size=(30,1), key='-SAVE_DOWD-')]])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Day of week distribution', layout,resizable=True)
     return window
@@ -607,7 +623,7 @@ def _renderHourlyDist(dowdDist):
     sliderrows = _getSliderRows(dowdDist)
     left_col = [[sg.Text("Use the sliders to indicate how load is used the relative to the hours of the day. For example if you use fiishe work at 5 and cook dinner at 6, the load will be higher than say at 4am.", size=(80,3))]]
     left_col.extend(sliderrows)
-    left_col.extend([[sg.Button('Save distribution', size=(30,1), key='-SAVE_HODD-')]])
+    left_col.extend([[sg.Button('Update distribution', size=(30,1), key='-SAVE_HODD-')]])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Day of week distribution', layout,resizable=True)
     return window
@@ -636,17 +652,33 @@ def _getHourlyDist(profile):
     return hourlyList
 
 def _renderLoadGeneration(profile):
+    md = "Not set"
+    dd = "Not set"
+    hd = "Not set"
+    if "MonthlyDistribution" in profile: md = "OK, set"
+    if "DayOfWeekDistribution" in profile: dd = "OK, set"
+    if "HourlyDistribution" in profile: hd = "OK, set"
+    saveDisabled = True
+    if "MonthlyDistribution" in profile and "DayOfWeekDistribution" in profile and "HourlyDistribution" in profile:
+        saveDisabled = False
+
     left_col = [
+        
+        [sg.Text('The load generator creates 5 minute usage data and stores it in the database for the simulator. It generates 12 months of data. It needs a start date.', size=(75,2))],
+        [sg.Text('The annual usage is the total KWH that will be used in a year. The hourly base load is what the home consumes when nobody is home (standby devices, fridge, freezer)', size=(85,2))],
+        [sg.Text('The three distributions are used to figure out how the annual usage is spread across hours, days and months. These must be set before the profile is complete.)', size=(85,2))],
+        [sg.Text('====================================================================================', size=(85,1))],
         [sg.Text('Start date', size=(30,1)), 
              sg.In(size=(25,1), enable_events=True ,key='-CAL-', default_text='2022-01-01'), 
              sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, 
                                 key='-CAL1-', format=('%Y-%m-%d'))],
         [sg.Text('Annual usage (KWH)', size=(30,1)), sg.In(size=(25,1), enable_events=True ,key='-ANNUAL_USE-', default_text=profile["AnnualUsage"])],
         [sg.Text('Hourly base load (KWH)', size=(30,1)), sg.In(size=(25,1), enable_events=True ,key='-BASE_LOAD-', default_text=profile["HourlyBaseLoad"])],
-        [sg.Text('Monthly distribution (% by month)', size=(30,1)), sg.Button('Monthly dist', key='-MONTH_DIST-')],
-        [sg.Text('Day of week distribution (% by day)', size=(30,1)), sg.Button('Daily dist', key='-DOW_DIST-')],
-        [sg.Text('Hourly distribution (% per hour)', size=(30,1)), sg.Button('Hourly dist', key='-HOUR_DIST-')],
-        [sg.Button('Generate data', size=(30,1), key='-GEN_LOAD-', disabled=True), sg.Text("This will generate data (Load only) initialize and populate the DB", size=(50,1), key='-ALPHA_FETCH_STATUS-')]
+        [sg.Text('Monthly distribution (% by month)', size=(30,1)), sg.Button('Monthly distribution', key='-MONTH_DIST-', size=(21,1)), sg.Text(md, size=(10,1), key='-MONTH_DIST_STAT-')],
+        [sg.Text('Day of week distribution (% by day)', size=(30,1)), sg.Button('Daily distribution', key='-DOW_DIST-', size=(21,1)), sg.Text(dd, size=(10,1), key='-DOW_DIST_STAT-')],
+        [sg.Text('Hourly distribution (% per hour)', size=(30,1)), sg.Button('Hourly distribution', key='-HOUR_DIST-', size=(21,1)), sg.Text(hd, size=(10,1), key='-HOUR_DIST_STAT-')],
+        [sg.Text('====================================================================================', size=(85,1))],
+        [sg.Button('Save profile and generate data', size=(30,1), key='-GEN_LOAD-', disabled=saveDisabled), sg.Text("This will generate data (Load only) initialize and populate the DB", size=(50,1), key='-ALPHA_FETCH_STATUS-')]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Load generation input', layout,resizable=True)
@@ -654,14 +686,14 @@ def _renderLoadGeneration(profile):
 
 def _saveProfile(profile):
     # print (profile)
-    with open(CONFIG + "loadProfile.json", 'w') as f:
+    with open(os.path.join(CONFIG, "loadProfile.json"), 'w') as f:
         json.dump(profile, f)
     return
 
 def _loadProfile():
     profile = {}
     try:
-        with open(CONFIG + "loadProfile.json") as lp:
+        with open(os.path.join(CONFIG, "loadProfile.json")) as lp:
             profile = json.load(lp)
     except:
         profile = {"AnnualUsage": 8000, "HourlyBaseLoad": 0.3}
@@ -672,6 +704,9 @@ def _generateLoadProfile():
     dwd = False
     hdd = False
     profile = _loadProfile()
+    if "MonthlyDistribution" in profile: md = True
+    if "DayOfWeekDistribution" in profile: dwd = True
+    if "HourlyDistribution" in profile: hdd = True
     window = _renderLoadGeneration(profile)
     start = '2022-01-01'
     while True:
@@ -688,16 +723,19 @@ def _generateLoadProfile():
         if event == '-MONTH_DIST-':
             profile["MonthlyDistribution"] = _getMonthlyDist(profile)
             md = True
+            window['-MONTH_DIST_STAT-'].update(value='OK, set')
             if md and dwd and hdd:
                 window['-GEN_LOAD-'].update(disabled=False)
         if event == '-DOW_DIST-':
             profile["DayOfWeekDistribution"] = _getDOWDist(profile)
             dwd = True
+            window['-DOW_DIST_STAT-'].update(value='OK, set')
             if md and dwd and hdd:
                 window['-GEN_LOAD-'].update(disabled=False)
         if event == '-HOUR_DIST-':
             profile["HourlyDistribution"] = _getHourlyDist(profile)
             hdd = True
+            window['-HOUR_DIST_STAT-'].update(value='OK, set')
             if md and dwd and hdd:
                 window['-GEN_LOAD-'].update(disabled=False)
         if event == '-GEN_LOAD-':
@@ -711,7 +749,10 @@ def _generateLoadProfile():
 
 def _getSolarData():
     left_col = [
-        [sg.Button('Load default solar data', key='-LOAD_DEFAULT-', size=(25,1)), sg.Text("Overwrites the solar data in the DB", size=(24,1))],
+        [sg.Text('There is only one option for solar data right now. This will use a default that matches the system configuration. The same 12 months of solar data will be applied to the database for the existing load data dates. If there is more than one year of load data, the solar data will be repeated.', size=(55,4))],
+        [sg.Text('Use this if you don\'t have solar data, but want to see the impact it may have. The data is from ireland, facing south east, a good year.', size=(55,2))],
+        [sg.Text('======================================================', size=(55,1))],
+        [sg.Button('Load default solar data', key='-LOAD_DEFAULT-', size=(25,1)), sg.Text("Overwrites the solar data in the DB", size=(25,1))],
         [sg.Button('OK', key='-OK-', size=(25,1))]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
@@ -724,7 +765,7 @@ def _getSolarData():
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if event == '-LOAD_DEFAULT-': 
-            dbFile = STORAGE + DBFILE
+            dbFile = os.path.join(STORAGE, DBFILE)
             loadDefaultSolar(CONFIG, dbFile)
             _setStatus()
         if event == '-OK-': 
@@ -734,6 +775,8 @@ def _getSolarData():
 
 def _getLoadProfile():
     left_col = [
+        [sg.Text('A load profile describes how electricity is used over the year. There are several ways to get a load profile. Your inverter/solar supplier may provide this information in a way that can be integrated; your electricity provider may provide smart meter data; you can guestimate your own usage. The load profile is used in the simulator to see when to draw on solar or the grid. The load profile should not include load shifting or car charging. These are covered in the what-if scenarios', size=(50,8))],
+        [sg.Text('===================================================', size=(50,1))],
         [sg.Button('Load profile from AlphaESS', key='-LOAD_ALPHA-', size=(25,1)), sg.Text("Requires AlphaESS login", size=(24,1))],
         [sg.Button('Generate profile', key='-LOAD_GENERATE-', size=(25,1)), sg.Text("Use this if you have no data", size=(24,1))],
         [sg.Button('Load profile from Electric Ireland', key='-LOAD_EI-', size=(25,1), disabled=True), sg.Text("Requires smart meter data (login)", size=(24,1))],
@@ -763,7 +806,7 @@ def _getProviderRates():
     return
 
 def _showReportDB():
-    display()
+    display(CONFIG)
     return
 
 def _callSimulate():
@@ -790,7 +833,7 @@ def _callSimulate():
     window.close()
     # print (begin, end)
 
-    guiMain(begin, end)
+    guiMain(CONFIG, begin, end)
 
 def _mainWin():
     global MAIN_WINDOW
@@ -826,6 +869,7 @@ def _mainWin():
 
 
 def main():
+    # sg.main_sdk_help()
     _mainWin()
 
 if __name__ == "__main__":

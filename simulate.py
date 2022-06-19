@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import sys
 import sqlite3
 from sqlite3 import Error
@@ -156,7 +157,7 @@ def _loadProperties(configLocation):
     global ORIGINAL_PANEL_COUNT
     global MAX_INVERTER_LOAD
 
-    with open(configLocation + "SystemProperties.json", 'r') as f:
+    with open(os.path.join(configLocation, "SystemProperties.json"), 'r') as f:
         data = json.load(f)
     STATE_OF_CHARGE_KWH = data["Battery Size"] * INPUT_SOC /100
     BATTERY_MINIMUM_KWH = data["Discharge stop"] * data["Battery Size"] / 100
@@ -225,7 +226,7 @@ def _getMaxChargeForSOC(soc):
     return ret
 
 def _loadPricePlans(configLocation):
-    with open(configLocation + "rates.json", 'r') as f:
+    with open(os.path.join(configLocation, "rates.json"), 'r') as f:
         data = json.load(f)
     return data
 
@@ -395,15 +396,17 @@ def _render(report):
     _renderSimpleGUI(chartDataII)
 
 
-def guiMain(begin, end):
+def guiMain(config, begin, end):
+    global CONFIG
+    CONFIG = config
     start = datetime.datetime.strptime(begin, '%Y-%m-%d')
     finish = start + relativedelta(months=int(end)) + datetime.timedelta(days=-1)
     print ("Simulating from " + datetime.datetime.strftime(start, '%Y-%m-%d') + " to " + datetime.datetime.strftime(finish, '%Y-%m-%d'))
     
     env = {}
-    with open(CONFIG + "EnvProperties.json", 'r') as f:
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
-    dbFile = env["StorageFolder"] + env["DBFileName"]
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
     configLocation = env["ConfigFolder"]
 
     scenarios = _loadProperties(configLocation)

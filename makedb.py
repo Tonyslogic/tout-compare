@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import sys
 import sqlite3
 from sqlite3 import Error
@@ -109,17 +110,17 @@ def guiMakeDB(config):
 def main():
     
     env = {}
-    with open(CONFIG + "EnvProperties.json", 'r') as f:
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
     storageFolder = env["StorageFolder"]
     dbFileName = env["DBFileName"]
 
-    with open(storageFolder + "dailystats.json", 'r') as f:
+    with open(os.path.join(storageFolder, "dailystats.json"), 'r') as f:
         data = json.load(f)
     logger.info(f"The number of days:: {len(data[0]['statistics'])}")
     rows, sums = _create_rows (data[0]['statistics'])
 
-    dbFile = storageFolder + dbFileName
+    dbFile = os.path.join(storageFolder, dbFileName)
     _createDB(dbFile)
     _fillDB(dbFile, rows, sums)
 

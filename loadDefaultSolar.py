@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 import sys
 import sqlite3
 from sqlite3 import Error
@@ -24,16 +25,8 @@ def loadDefaultSolar(config, dbFile):
     _loadDefaultSolar(dbFile)
 
 def _loadDefaultSolar(dbFile):
-    # jsn = []
-    # with open("solarsums.json", 'r') as f:
-    #     jsn = json.load(f)
-    # sums = pd.read_json(jsn)
-    # with open("solardaily.json", 'r') as f:
-    #     jsn = json.load(f)
-    # daily = pd.read_json(jsn)
     daily = pd.read_json(DAILY)
     sums = pd.read_json(SUMS)
-    # print(df2)
     conn = None
     try:
         conn = sqlite3.connect(dbFile)
@@ -46,7 +39,6 @@ def _loadDefaultSolar(dbFile):
                         FROM temp_sums AS t
                         WHERE substr(f.Date, 6) = t.MD
         """)
-        # print("sums done")
         cur.execute(""" UPDATE dailystats AS f
                         SET NormalPV = t.NormalPV
                         FROM temp_daily AS t
@@ -64,9 +56,9 @@ def _loadDefaultSolar(dbFile):
 
 def main():
     env = {}
-    with open(CONFIG + "EnvProperties.json", 'r') as f:
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
-    dbFile = env["StorageFolder"] + env["DBFileName"]
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
 
     
     _loadDefaultSolar(dbFile)

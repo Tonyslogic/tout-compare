@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from os import stat
+import os
 import sys
 import datetime
 import json
@@ -26,7 +27,7 @@ def _loadExistingData(storageFolder):
     ret = {}
     latest = datetime.datetime.strptime('2021-04-01', '%Y-%m-%d')
     try:
-        with open(storageFolder + "dailystats.json", 'r') as f:
+        with open(os.path.join(storageFolder, "dailystats.json"), 'r') as f:
             ret = json.load(f)
     except:
         return None, None
@@ -68,7 +69,7 @@ async def main():
     useOldData = False
     
     env = {}
-    with open(CONFIG + "EnvProperties.json", 'r') as f:
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
     storageFolder = env["StorageFolder"]
     
@@ -105,7 +106,7 @@ async def main():
             dataToUse[0]["statistics"].extend(data[0]["statistics"])
         else:
             dataToUse = data
-        with open(storageFolder + "dailystats.json", 'w') as f:
+        with open(os.path.join(storageFolder, "dailystats.json"), 'w') as f:
             json.dump(dataToUse, f)
 
 # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
