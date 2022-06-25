@@ -32,7 +32,10 @@ The basic configuration is used to pick a storage locations. If the folders do n
 
 ![Basic configuration](./docs/BasicConfig.png)
 
-Of course, at this stage there is no other configurtion, so working down from the top.
+At this point, there is no other configurtion. There are two options:
+* Use demo data for a quick start (Click the 'Add Demo Data' button). You can then explore the rest of the configuraton and try out the simulate directly.
+
+* Create your own configuration from scratch -- keep reading
 
 The system configuration is populated with some defaults that describe a basic battery (5.7KWH) and inverter (5.0 KW) setup. Modify these if you have your own solar data. Update saves a configuration file that is used elsewhere.
 

@@ -10,9 +10,10 @@ from simulate import guiMain
 from fetchdata_gui import guiFetch
 from makedb import guiMakeDB
 from makedbFromProfile import _guiDBFromProfile
-from windowRates import getRates
+from windowRates import getRates, _updateRates
 from loadDefaultSolar import loadDefaultSolar
 from reportdb import display
+from demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 
 MAIN_WINDOW = None
 
@@ -26,6 +27,28 @@ STATUS_SCENARIOS = False
 STATUS_LOAD = False
 STATUS_PV = False
 STATUS_RATES = False
+
+def _saveDemoConfig(): 
+    # SystemProperties.json
+    _updateSysConfig(DEMO_SYSTEM)
+    # rates.json
+    _updateRates(DEMO_RATES)
+    # loadProfile.json
+    profile = {}
+    profile["AnnualUsage"] = DEMO_ANNUAL
+    profile["HourlyBaseLoad"] = DEMO_BASE
+    profile["MonthlyDistribution"] = DEMO_MONTHLYDIST
+    profile["DayOfWeekDistribution"] = DEMO_DOWDIST
+    profile["HourlyDistribution"] = DEMO_HOURLYDIST
+    _saveProfile(profile)
+    # populateDB 
+    _guiDBFromProfile(CONFIG, DEMO_START)
+    # solar 
+    dbFile = os.path.join(STORAGE, DBFILE)
+    loadDefaultSolar(CONFIG, dbFile)
+    
+    _setStatus()
+    return
 
 def _writeEnv():
     data = {}
@@ -43,12 +66,13 @@ def _getConfig():
     global DBFILE
 
     enableSave = not os.path.isdir(CONFIG) and not os.path.isdir(STORAGE)
+    enableDemo = not os.path.isfile(os.path.join(CONFIG, "EnvProperties.json"))
 
     left_col = [
             [sg.Text('Configuration Folder', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-C_FOLDER-', default_text=CONFIG), sg.FolderBrowse()],
             [sg.Text('Storage Folder', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-S_FOLDER-', default_text=STORAGE), sg.FolderBrowse()],
             [sg.Text('DB Filename', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-DB_NAME-', default_text=DBFILE)],
-            [sg.Button('Save', key='-CONFIG_OK-', disabled=enableSave)]
+            [sg.Button('Save', key='-CONFIG_OK-', disabled=enableSave, size=(15,1)), sg.Button('Add Demo data', key='-DEMO-', disabled=enableDemo, size=(15,1)), sg.Button('Close', key='-CLOSE-', size=(15,1)) ]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Time of use comparison -- config', layout,resizable=True)
@@ -67,7 +91,12 @@ def _getConfig():
             sfolder = values['-S_FOLDER-'] 
             if os.path.isdir(cfolder) and os.path.isdir(sfolder):
                 window['-CONFIG_OK-'].update(disabled=False) 
-        if event == '-DB_NAME-': dbFile = values['-DB_NAME-'] 
+        if event == '-DB_NAME-': dbFile = values['-DB_NAME-']
+        if event == '-DEMO-':
+            _saveDemoConfig()
+        if event == '-CLOSE-':
+            window.close()
+            break
         if event == '-CONFIG_OK-':
             CONFIG = cfolder
             STORAGE = sfolder
@@ -75,8 +104,7 @@ def _getConfig():
             if os.path.isdir(cfolder) and os.path.isdir(sfolder):
                 _writeEnv()
                 _setStatus()
-                window.close()
-            break
+                window['-DEMO-'].update(disabled=False) 
 
 def _loadSysConfig():
     global STATUS_SYS_CONFIG
@@ -245,6 +273,19 @@ def _setStatus():
         MAIN_WINDOW['-SIMULATE-'].update(disabled=False)
     else:
         MAIN_WINDOW['-SIMULATE-'].update(disabled=True)
+    
+    if not STATUS_BASIC_CONFIG:
+        MAIN_WINDOW['-SYS_CONFIG-'].update(disabled=True)
+        MAIN_WINDOW['-SCENARIOS-'].update(disabled=True)
+        MAIN_WINDOW['-PROFILE-'].update(disabled=True)
+        MAIN_WINDOW['-SOLAR_DATA-'].update(disabled=True)
+        MAIN_WINDOW['-RATES-'].update(disabled=True)
+    else:
+        MAIN_WINDOW['-SYS_CONFIG-'].update(disabled=False)
+        MAIN_WINDOW['-SCENARIOS-'].update(disabled=False)
+        MAIN_WINDOW['-PROFILE-'].update(disabled=False)
+        MAIN_WINDOW['-SOLAR_DATA-'].update(disabled=False)
+        MAIN_WINDOW['-RATES-'].update(disabled=False)
     return
 
 def _renderLoadShift(loadShift):
@@ -577,7 +618,7 @@ def _renderMonthlyDist(distribution):
     return window
 
 def _getMonthlyDist(profile):
-    monthlyDist = monthlyDist = {"Jan": 9.37, "Feb": 7.08, "Mar": 8.12, "Apr": 8.14, "May": 9.4, "Jun": 8.98, "Jul": 8.87, "Aug": 9.17, "Sep": 6.45, "Oct": 7.95, "Nov": 7.53, "Dec": 8.96}
+    monthlyDist = {"Jan": 9.37, "Feb": 7.08, "Mar": 8.12, "Apr": 8.14, "May": 9.4, "Jun": 8.98, "Jul": 8.87, "Aug": 9.17, "Sep": 6.45, "Oct": 7.95, "Nov": 7.53, "Dec": 8.96}
     try:
         monthlyDist = profile["MonthlyDistribution"]
     except:
@@ -602,7 +643,7 @@ def _renderDOWDist(dowdDist):
     return window
 
 def _getDOWDist(profile):
-    dayOfWeekDist = dayOfWeekDist = {"Sun": 14.75, "Mon": 14.13, "Tue": 13.22, "Wed": 13.67, "Thu": 13.68, "Fri": 14.18, "Sat": 16.37
+    dayOfWeekDist = {"Sun": 14.75, "Mon": 14.13, "Tue": 13.22, "Wed": 13.67, "Thu": 13.68, "Fri": 14.18, "Sat": 16.37
     }
     try:
         dayOfWeekDist = profile["DayOfWeekDistribution"]
@@ -811,10 +852,20 @@ def _showReportDB():
 
 def _callSimulate():
     begin = "2001-01-01"
+    try:
+        dbFile = os.path.join(STORAGE, DBFILE)
+        conn = sqlite3.connect(dbFile)
+        cur = conn.cursor()
+        cur.execute("SELECT min(Date) FROM dailysums")
+        res = cur.fetchone()
+        conn.close()
+        begin = res[0]
+    except:
+        pass
     end = 12
     left_col = [
              [sg.Text('Start date', size=(24,1)), 
-             sg.In(size=(25,1), enable_events=True ,key='-CAL-'), 
+             sg.In(size=(25,1), enable_events=True ,key='-CAL-', default_text=begin), 
              sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, 
                                 key='-CAL1-', format=('%Y-%m-%d'))],
             [sg.Text('Number of months to simulate', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12")],
@@ -828,12 +879,11 @@ def _callSimulate():
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if event == '-CAL-': begin = values['-CAL-']
         if event == '-SIM_MONTHS-': end = values['-SIM_MONTHS-']
-        if event == '-SIM_OK-': break
+        if event == '-SIM_OK-': 
+            window.close()
+            guiMain(CONFIG, begin, end)
+            break
 
-    window.close()
-    # print (begin, end)
-
-    guiMain(CONFIG, begin, end)
 
 def _mainWin():
     global MAIN_WINDOW
