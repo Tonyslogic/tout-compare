@@ -14,17 +14,6 @@ import aiohttp
 CONFIG = "C:\\dev\\solar\\"
 MGN = 919821
 
-# BASE_URL = "https://re.jrc.ec.europa.eu/api/v5_2/"
-# location = "seriescalc?lat=53.626&lon=-8.171"
-# OPTIONS1 = "raddatabase=PVGIS-SARAH2&browser=1&outputformat=json&userhorizon=&usehorizon=1"
-# slope = "angle=24"
-# azimuth = "aspect=136"
-# YEAR = "startyear=2020&endyear=2020"
-# OPTIONS2 = "mountingplace=&optimalinclination=0&optimalangles=0&js=1&select_database_hourly=PVGIS-SARAH2"
-# YEAR2 = "hstartyear=2020&hendyear=2020"
-# OPTIONS3 = "trackingtype=0"
-# hslope = "hourlyangle=24"
-# hazimuth = "hourlyaspect=136"
 URL = Template( "https://re.jrc.ec.europa.eu/api/v5_2/seriescalc?lat=$LAT&lon=$LON&raddatabase=PVGIS-SARAH2&browser=1&outputformat=json&userhorizon=&usehorizon=1&angle=$SLOPE&aspect=$AZIMUTH&startyear=2020&endyear=2020&mountingplace=&optimalinclination=0&optimalangles=0&js=1&select_database_hourly=PVGIS-SARAH2&hstartyear=2020&hendyear=2020&trackingtype=0&hourlyangle=$SLOPE&hourlyaspect=$AZIMUTH")
 
 logger = logging.getLogger()
