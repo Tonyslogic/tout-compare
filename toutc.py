@@ -13,6 +13,7 @@ from makedbFromProfile import _guiDBFromProfile
 from windowRates import getRates, _updateRates
 from loadDefaultSolar import loadDefaultSolar
 from reportdb import display
+from pvgis2db import guiPVgis
 from demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 
 MAIN_WINDOW = None
@@ -794,6 +795,7 @@ def _getSolarData():
         [sg.Text('Use this if you don\'t have solar data, but want to see the impact it may have. The data is from ireland, facing south east, a good year.', size=(55,2))],
         [sg.Text('======================================================', size=(55,1))],
         [sg.Button('Load default solar data', key='-LOAD_DEFAULT-', size=(25,1)), sg.Text("Overwrites the solar data in the DB", size=(25,1))],
+        [sg.Button('Load solar data from PV GIS', key='-LOAD_PVGIS-', size=(25,1)), sg.Text("Needs location and aspect information", size=(25,1))],
         [sg.Button('OK', key='-OK-', size=(25,1))]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
@@ -808,6 +810,9 @@ def _getSolarData():
         if event == '-LOAD_DEFAULT-': 
             dbFile = os.path.join(STORAGE, DBFILE)
             loadDefaultSolar(CONFIG, dbFile)
+            _setStatus()
+        if event == '-LOAD_PVGIS-': 
+            guiPVgis(CONFIG)
             _setStatus()
         if event == '-OK-': 
             window.close()
