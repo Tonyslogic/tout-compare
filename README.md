@@ -78,9 +78,19 @@ If follows the same use pattern as for scenarios, load shifting, and car chargin
 
 ![Rate editor](./docs/RateEditor.png)
 
-Once saved, the simulation option is avaialble. Before going there you can also add some default PV generation. To do this, use the 'Solar data' button. Right now there is only one option. In future, it should be possible to use other sources such as https://re.jrc.ec.europa.eu/pvg_tools/en/
+Once saved, the simulation option is avaialble. Before going there you can also add some default PV generation. To do this, use the 'Solar data' button. Right now there are two options. Loading the default will load the same solar data that is in the demo data. It automatically aligns day by day with the load profile data.
 
 ![Load default solar](./docs/LoadDefaultSolar.png)
+
+If you are feeling a little more brave, you can 'Load solar data from PV GIS'. This asks for details about your (planned) solar configuration, then fetches data from a fantastic eruopean resource/tool: https://re.jrc.ec.europa.eu/pvg_tools/en/. Once again it aligns the data with the dates already in the database.
+
+![Load PV GIS](./docs/LoadPVGIS.png)
+
+You will need you latitude and logditude. Google maps is you friend here. On windows, drop a pin on a nearby blank area and look in the search bar or on Android, drop a pin on a nearby blank area and the coordinates appear at the top.
+The slope refers to the roof slope -- it makes a difference. I used an angle meter on my phone.
+The azimuth refers to the direction the panels will face 0=North, 90=East, etc.
+Panels ane Wp speak for themselves.
+You can add up to two strings here. If your inverter has two inputs, check 'Dedicated MPPT' so the strings are added together (as opposed to picking the best for any given 5 minute interval)
 
 Simulating is as simple as pressing the 'Simulate' button, providing a start date and length (from within the avaialble data). 
 
