@@ -85,7 +85,7 @@ async def main():
             print ("Updating start to " + START)
         if fnd > fin:
             print ("already have data to " + latest + ". Exiting")
-            sys.exit(0)
+            return
     except:
         pass
     # sys.exit(0)

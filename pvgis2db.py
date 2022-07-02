@@ -110,7 +110,7 @@ def _renderPanelNav():
     return window
 
 def _getPanelsGUI():
-    panels = {}
+    panels = None
     secondString = False
     
     nav_window = _renderPanelNav()
@@ -125,6 +125,7 @@ def _getPanelsGUI():
             nav_window['-PAN2-'].update(disabled=secondString)
             nav_window['-WP2-'].update(disabled=secondString)
         if event == '-FETCH_SOLAR-':
+            panels = {}
             panels["Location"] = {"Latitude": values['-LAT-'], "Longitude": values['-LON-']}
             panels["DedicatedMPPTs"] = values['-DEDICATED-']
             panels["Strings"] = []
@@ -141,7 +142,7 @@ def guiPVgis(config):
     global CONFIG
     CONFIG = config
     panels = _getPanelsGUI()
-    main(panels)
+    if panels is not None: main(panels)
 
 async def _getDataFromPVGIS(slope, azimuth, latitude, longitude):
     ret = {}

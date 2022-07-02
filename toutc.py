@@ -445,7 +445,7 @@ def _editCarCharge(carCharge):
 def _renderOneScenario(scenario):
     try:
         bat = scenario["Battery Size"]
-        pan = scenario["Original panels"]
+        pan = scenario["Increaed panels"]
         stop = scenario["Discharge stop"]
     except:
         bat = 5.7
@@ -482,7 +482,7 @@ def _editScenario(scenario):
         try: 
             if event == '-SCENARIO_NAME-': scenario["Name"] = values['-SCENARIO_NAME-'] 
             if event == '-SCENARIO_BATTERY-': scenario["Battery Size"] = float(values['-SCENARIO_BATTERY-']) 
-            if event == '-SCENARIO_PANELS-': scenario["Original panels"] = int(values['-SCENARIO_PANELS-'])
+            if event == '-SCENARIO_PANELS-': scenario["Increaed panels"] = int(values['-SCENARIO_PANELS-'])
             if event == '-DISCHARGE_STOP-': scenario["Discharge stop"] = float(values['-DISCHARGE_STOP-'])
             if event == '-EDIT_LOAD_SHIFT-': scenario["LoadShift"] = _editLoadShift(loadShift)
             if event == '-EDIT_CAR_CHARGING-': scenario["CarCharge"] = _editCarCharge(carCharge)
@@ -584,6 +584,10 @@ def _fetchAlphaData():
         if event == '-ALPHA_USER-': user = values['-ALPHA_USER-']
         if event == '-ALPHA_PASS-': passwd = values['-ALPHA_PASS-']
         if event == '-FETCH_ALPHA-': 
+            begin = values['-START-']
+            end = values['-FINISH-']
+            user = values['-ALPHA_USER-']
+            passwd = values['-ALPHA_PASS-']
             guiFetch(user, passwd, begin, end, CONFIG)
             guiMakeDB(CONFIG)
             _setStatus()
