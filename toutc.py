@@ -1,3 +1,4 @@
+import copy
 import json
 from locale import locale_encoding_alias
 import sqlite3
@@ -313,6 +314,7 @@ def _renderLoadShift(loadShift):
             sg.Checkbox('Oct', size=(5,1), default=10 in shift["months"], key='-LS_MONTH_A' + str(i)),
             sg.Checkbox('Nov', size=(5,1), default=11 in shift["months"], key='-LS_MONTH_B' + str(i)),
             sg.Checkbox('Dec', size=(5,1), default=12 in shift["months"], key='-LS_MONTH_C' + str(i)),
+            sg.Button('Del', size=(6,1), key='-DEL_LS_CFG-' + str(i))
         ])
         left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     left_col.append([sg.Button('Add a load shift configuration', key='-ADD_LS-')]),
@@ -323,11 +325,19 @@ def _renderLoadShift(loadShift):
     return window
 
 def _editLoadShift(loadShift):
+    oldLoadShift = copy.deepcopy(loadShift)
     lsWindow = _renderLoadShift(loadShift)
     while True:
         event, values = lsWindow.read()
         # print(event)
-        if event in (sg.WIN_CLOSED, 'Exit'): break
+        if event in (sg.WIN_CLOSED, 'Exit'): 
+            loadShift = oldLoadShift
+            break
+        if str(event).startswith('-DEL_LS_CFG'):
+            index = int(event[-1])
+            del loadShift[index]
+            lsWindow.close()
+            lsWindow = _renderLoadShift(loadShift)
         if event == '-ADD_LS-': 
             loadShift.append({"stop at": 80, "begin": 2, "end": 4, "months": [1,2,3,4,5,6,7,8,9,10,11,12]})
             lsWindow.close()
@@ -381,6 +391,7 @@ def _renderCarCharge(carCharge):
             sg.Checkbox('Oct', size=(5,1), default=10 in charge["months"], key='-CC_MONTH_A' + str(i)),
             sg.Checkbox('Nov', size=(5,1), default=11 in charge["months"], key='-CC_MONTH_B' + str(i)),
             sg.Checkbox('Dec', size=(5,1), default=12 in charge["months"], key='-CC_MONTH_C' + str(i)),
+            sg.Button('Del', size=(6,1), key='-DEL_CC_CFG-' + str(i))
         ])
         left_col.append([
             sg.Text('Applicable days:', size=(25,1)),
@@ -402,12 +413,20 @@ def _renderCarCharge(carCharge):
 
 
 def _editCarCharge(carCharge):
+    oldCarCharge = copy.deepcopy(carCharge)
     ccWindow = _renderCarCharge(carCharge)
     
     while True:
         event, values = ccWindow.read()
         # print(event)
-        if event in (sg.WIN_CLOSED, 'Exit'): break
+        if event in (sg.WIN_CLOSED, 'Exit'): 
+            carCharge = oldCarCharge
+            break
+        if str(event).startswith('-DEL_CC_CFG'):
+            index = int(event[-1])
+            del carCharge[index]
+            ccWindow.close()
+            ccWindow = _renderCarCharge(carCharge)
         if event == '-ADD_CC-': 
             carCharge.append({"draw": 7.5, "begin": 2, "end": 4, "months": [1,2,3,4,5,6,7,8,9,10,11,12], "days": [0,1,2,3,4,5,6]})
             ccWindow.close()
@@ -484,8 +503,12 @@ def _editScenario(scenario):
             if event == '-SCENARIO_BATTERY-': scenario["Battery Size"] = float(values['-SCENARIO_BATTERY-']) 
             if event == '-SCENARIO_PANELS-': scenario["Increaed panels"] = int(values['-SCENARIO_PANELS-'])
             if event == '-DISCHARGE_STOP-': scenario["Discharge stop"] = float(values['-DISCHARGE_STOP-'])
-            if event == '-EDIT_LOAD_SHIFT-': scenario["LoadShift"] = _editLoadShift(loadShift)
-            if event == '-EDIT_CAR_CHARGING-': scenario["CarCharge"] = _editCarCharge(carCharge)
+            if event == '-EDIT_LOAD_SHIFT-': 
+                loadShift = _editLoadShift(loadShift)
+                scenario["LoadShift"] = loadShift
+            if event == '-EDIT_CAR_CHARGING-': 
+                carCharge = _editCarCharge(carCharge)
+                scenario["CarCharge"] = carCharge
             scenarioWindow['-UPDATE_SCENARIO-'].update(disabled=False)
         except:
             scenarioWindow['-UPDATE_SCENARIO-'].update(disabled=True)

@@ -78,6 +78,17 @@ If follows the same use pattern as for scenarios, load shifting, and car chargin
 
 ![Rate editor](./docs/RateEditor.png)
 
+There are a couple of things to note when editing the rates:
+
+* The day range must start with 0 and end with 24
+* Only whole hours (integers) are accepted, 24Hr clock.
+* Each range must start at the end of the previous
+* Adjacent ranges with the same cost will be merged
+* When adding a new range you must start with the previous, and follow the steps below
+
+![Day profile edit](./docs/RateDateProfile.png)
+
+
 Once saved, the simulation option is avaialble. Before going there you can also add some default PV generation. To do this, use the 'Solar data' button. Right now there are two options. Loading the default will load the same solar data that is in the demo data. It automatically aligns day by day with the load profile data.
 
 ![Load default solar](./docs/LoadDefaultSolar.png)

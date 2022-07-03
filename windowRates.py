@@ -1,7 +1,7 @@
 import json
 from locale import locale_encoding_alias
 import os
-import sqlite3
+import copy
 import PySimpleGUI as sg 
 from collections import defaultdict
 
@@ -114,19 +114,19 @@ def _renderOneRatePlan(ratePlan):
 
         for r, rate in enumerate(rateRange):
             left_col.append([
-                sg.Button('Del', size=(6,1), key='-DEL_DAY_RATE-' + str(i) + str(r)),
                 sg.Text('From (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-RATE_BEGIN' + str(i) + str(r), default_text=rate["begin"]),
                 sg.Text('To (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-RATE_END' + str(i) + str(r), default_text=rate["end"]),
-                sg.Text('Rate (cents)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-RATE_PRICE' + str(i) + str(r), default_text=rate["price"])
+                sg.Text('Rate (cents)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-RATE_PRICE' + str(i) + str(r), default_text=rate["price"]),
+                sg.Button('Del', size=(6,1), key='-DEL_DAY_RATE-' + str(i) + str(r))
                 ])
         left_col.append([sg.Text('--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------', size=(86,1))])
         left_col.append([
-                sg.Button('Add', size=(6,1), key='-ADD_HR_RANGE-' + str(i)),
                 sg.Text('From (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-NEW_RATE_BEGIN' + str(i), default_text=0),
                 sg.Text('To (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-NEW_RATE_END' + str(i), default_text=24),
-                sg.Text('Rate (cents)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-NEW_RATE_PRICE' + str(i), default_text=0)
+                sg.Text('Rate (cents)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-NEW_RATE_PRICE' + str(i), default_text=0),
+                sg.Button('Add', size=(6,1), key='-ADD_HR_RANGE-' + str(i))
                 ])
-        left_col.append([sg.Button('Delete this day profile', key='-DEL_DAY_PROFILE' + str(i), size=(30,1), disabled=True)])
+        left_col.append([sg.Button('Delete this day profile', key='-DEL_DAY_PROFILE' + str(i), size=(30,1), disabled=False)])
         left_col.append([sg.Text('======================================================================================', size=(86,1))])
     
     left_col.append([sg.Button('Add another day profile', key='-ADD_DAY_RATE-', size=(30,1))])
@@ -206,10 +206,13 @@ def _scrapeNewRange(index, values):
     return rng
 
 def _editRatePlan(ratePlan):
+    oldRatePlan = copy.deepcopy(ratePlan)
     ratePlanWindow = _renderOneRatePlan(ratePlan)
     while True:
         event, values = ratePlanWindow.read()
-        if event in (sg.WIN_CLOSED, 'Exit'): break
+        if event in (sg.WIN_CLOSED, 'Exit'): 
+            ratePlan = oldRatePlan
+            break
         try: 
             ratePlanWindow['-UPDATE_RATE_PLAN-'].update(disabled=False)
             if str(event).startswith('-RATE_DAY_'): 
@@ -249,6 +252,11 @@ def _editRatePlan(ratePlan):
                 ratePlan["Rates"][index]["Hours"] = new
                 ratePlan["Rates"][index]["Days"] = latestDayTypes[str(index)]
                 _getSimpleProps(ratePlan, values)
+                ratePlanWindow.close()
+                ratePlanWindow = _renderOneRatePlan(ratePlan)
+            if str(event).startswith('-DEL_DAY_PROFILE'):
+                index = int(event[-1])
+                del ratePlan["Rates"][index]
                 ratePlanWindow.close()
                 ratePlanWindow = _renderOneRatePlan(ratePlan)
             if str(event).startswith('-ADD_DAY_RATE-'):
