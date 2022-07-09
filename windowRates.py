@@ -358,7 +358,8 @@ def getRates(config):
                 "Standing charges": 0,
                 "Bonus cash": 0,
                 "Supplier": "Unknown",
-                "Rates": []
+                "Rates": [],
+                "Active": True
                 })
             nav_window.close()
             nav_window = _renderRatePlanNav(rates)

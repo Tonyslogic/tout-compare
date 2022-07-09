@@ -264,6 +264,12 @@ def _getCosts(usage, rateLookup, feedInRate):
 def _showMeTheMoney(usage, pricePlans):
     ret = []
     for plan in pricePlans:
+        active = True
+        try:
+            active = plan["Active"]
+        except:
+            pass
+        if not active: continue
         cost = {}
         cost["Supplier"] = plan["Supplier"]
         cost["Plan"] = plan["Plan"]
@@ -418,6 +424,12 @@ def guiMain(config, begin, end):
     df = _loadDataFrameFromDB(dbFile)
     report = []
     for scenario in scenarios:
+        active = False
+        try:
+            active = scenario["Active"]
+        except:
+            pass
+        if not active: continue
         sName = _loadScenario(scenario)
         res, unitsBought, unitsSold = _simulate(df, start, finish)
         prices = _showMeTheMoney(res, pricePlans)

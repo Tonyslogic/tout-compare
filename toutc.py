@@ -1,4 +1,6 @@
+from ast import keyword
 import copy
+import itertools
 import json
 from locale import locale_encoding_alias
 import sqlite3
@@ -901,10 +903,41 @@ def _callSimulate():
              sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, 
                                 key='-CAL1-', format=('%Y-%m-%d'))],
             [sg.Text('Number of months to simulate', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12")],
-            [sg.Button('OK', key='-SIM_OK-')]
+            [sg.Text('=================================================================================================================', size=(100,1))],
+            [sg.Text('Tariff rates to compare:', size=(50,1)), sg.Text('Scenarios to simulate:', size=(50,1))]
     ]
+    rates = _loadRates()
+    sysProps = _loadSysConfig()
+    scenarios = sysProps["Scenarios"]
+    for index, combination in enumerate(itertools.zip_longest(rates, scenarios, fillvalue=None)):
+        rate = "--"
+        rateActive = False
+        rateKey = "-NA-"
+        rateDisabled = True
+        if combination[0] is not None:
+            rate = combination[0]["Supplier"] + "," + combination[0]["Plan"]
+            try: rateActive = combination[0]["Active"]
+            except: rateActive = True
+            rateKey = '-RATE-'+ str(index)
+            rateDisabled = False
+        scenario = "--"
+        scenarioActive = False
+        scenarioKey = "-NA-"
+        scenarioDisabled = True
+        if combination[1] is not None:
+            scenario = combination[1]["Name"]
+            try: scenarioActive = combination[1]["Active"]
+            except: scenarioActive = True
+            scenarioKey = '-SCENARIO-'+ str(index)
+            scenarioDisabled = False
+        left_col.append([
+            sg.Checkbox(rate, size=(47,1), default=rateActive, disabled=rateDisabled, enable_events=True, key=rateKey),
+            sg.Checkbox(scenario, size=(47,1), default=scenarioActive, disabled=scenarioDisabled, enable_events=True, key=scenarioKey)
+            ])
+    left_col.append([sg.Text('===============================================================================================================', size=(100,1))])
+    left_col.append([sg.Button('Simulate & Compare', key='-SIM_OK-')])
     layout = [[sg.Column(left_col, element_justification='l')]]    
-    window = sg.Window('Simulation parameters', layout,resizable=True)
+    window = sg.Window('Simulation and comparison parameters', layout,resizable=True)
 
     while True:
         event, values = window.Read()
@@ -912,6 +945,17 @@ def _callSimulate():
         if event == '-CAL-': begin = values['-CAL-']
         if event == '-SIM_MONTHS-': end = values['-SIM_MONTHS-']
         if event == '-SIM_OK-': 
+            # print(values)
+            for key, value in values.items():
+                if str(key).startswith('-RATE-'):
+                    rateIndex = int(key[-1])
+                    rates[rateIndex]["Active"] = value
+                if str(key).startswith('-SCENARIO-'):
+                    scenarioIndex = int(key[-1])
+                    scenarios[scenarioIndex]["Active"] = value
+            sysProps["Scenarios"] = scenarios
+            _updateSysConfig(sysProps)
+            _updateRates(rates)
             window.close()
             guiMain(CONFIG, begin, end)
             break
