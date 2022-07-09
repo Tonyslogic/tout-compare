@@ -319,7 +319,7 @@ def click(event):
         cid = int(TABLE.identify_column(event.x)[1:])-1     # check which column clicked
         WINDOW.write_event_value("-TABLE-CLICK-", cid)
 
-def _renderSimpleGUI(chartData):
+def _renderSimpleGUI(chartData, begin, end):
     global TABLE
     global WINDOW
     # sg.theme('DarkBlue')
@@ -328,7 +328,7 @@ def _renderSimpleGUI(chartData):
         [sg.Table(chartData[1:], headings=chartData[0], auto_size_columns=True,
             def_col_width=20, enable_events=True, key='-TABLE-', expand_x=True, expand_y=True)],
     ]
-    WINDOW = sg.Window('SimulationResults', layout, resizable=True, finalize=True)
+    WINDOW = sg.Window('SimulationResults (' + str(end) + ' months, beginning: ' + begin + ')', layout, resizable=True, finalize=True)
     TABLE = WINDOW['-TABLE-'].Widget
     TABLE.bind('<Double-1>', double_click, add='+')
     TABLE.bind('<Button-1>', click, add='+')
@@ -362,7 +362,7 @@ def _renderSimpleGUI(chartData):
     WINDOW.close()
 
 
-def _render(report):
+def _render(report, begin, end):
     # chartData = {}
     # chartData["Scenario"] = []
     # chartData["Supplier"] = []
@@ -391,9 +391,13 @@ def _render(report):
     chartDataII = [["Scenario", "Supplier", "Plan", "Nett(€)", "KWH Bought", "Bought(€)", "KWH Sold", "Sold(€)", "Standing(€)", "Bonus(€)"]]
     for scenario in report:
         for plan in scenario["Plan Costs"]:
-            chartDataII.append([scenario["Scenario"], plan["Supplier"], plan["Plan"], str(int(plan["Total"])), scenario["KWH Bought"], 
-                                str(int(plan["Buy"])), scenario["KWH Sold"], str(int(plan["Sell"])), plan["Fixed"], plan["Carrot"] ])
-    _renderSimpleGUI(chartDataII)
+            fixed12m = float(plan["Fixed"])
+            fixed = float('%.2f' % (fixed12m/12*int(end)))
+            total = '%.2f' % (int(plan["Total"]) - fixed12m + fixed)
+            # "{:.2f}".format(5)
+            chartDataII.append([scenario["Scenario"], plan["Supplier"], plan["Plan"], float(total), scenario["KWH Bought"], 
+                                str(int(plan["Buy"])), scenario["KWH Sold"], str(int(plan["Sell"])), fixed, plan["Carrot"] ])
+    _renderSimpleGUI(chartDataII, begin, end)
 
 
 def guiMain(config, begin, end):
@@ -419,7 +423,7 @@ def guiMain(config, begin, end):
         prices = _showMeTheMoney(res, pricePlans)
         report.append({"Scenario": sName, "KWH Bought": unitsBought, "KWH Sold": unitsSold, "Plan Costs": prices})
     
-    _render(report)
+    _render(report, begin, end)
 
 def main():
     begin = input("Start date (YYYY-MM-DD): ")
