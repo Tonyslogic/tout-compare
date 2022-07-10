@@ -1,3 +1,4 @@
+import csv
 import logging
 import json
 import os
@@ -333,14 +334,17 @@ def _renderSimpleGUI(chartData, begin, end):
     layout = [
         [sg.Table(chartData[1:], headings=chartData[0], auto_size_columns=True,
             def_col_width=20, enable_events=True, key='-TABLE-', expand_x=True, expand_y=True)],
+        [sg.Button('Close', key='-CLOSEREPORT-', size=(25,1)), sg.Button('Save CSV', key='-SAVEREPORT-', size=(25,1))]
     ]
-    WINDOW = sg.Window('SimulationResults (' + str(end) + ' months, beginning: ' + begin + ')', layout, resizable=True, finalize=True)
+    title = 'SimulationResults (' + str(end) + ' months beginning ' + begin + ')'
+    WINDOW = sg.Window(title, layout, resizable=True, finalize=True)
     TABLE = WINDOW['-TABLE-'].Widget
     TABLE.bind('<Double-1>', double_click, add='+')
     TABLE.bind('<Button-1>', click, add='+')
     while True:
         event, values = WINDOW.read()
         if event == sg.WINDOW_CLOSED:
+            WINDOW.close()
             break
         elif event == '-TABLE-CLICK-':
             column = values[event]
@@ -364,8 +368,18 @@ def _renderSimpleGUI(chartData, begin, end):
                 sortedCD.extend(sorted(chartData[1:], reverse=True, key = lambda x: x[column]))
             # then update window['-TABLE-'].update(values=new_data)
             WINDOW['-TABLE-'].update(values=sortedCD)
-
-    WINDOW.close()
+        elif event == '-SAVEREPORT-':
+            with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
+                env = json.load(f)
+            STORAGE = os.path.join(env["StorageFolder"])
+            myFormats = [('Comma separated values','*.csv')]
+            filename = sg.filedialog.asksaveasfilename(filetypes=myFormats, initialdir=STORAGE, defaultextension="*.csv", initialfile=title)
+            with open(filename, "w", newline="\n") as f:
+                writer = csv.writer(f)
+                writer.writerows(chartData)
+        elif event == '-CLOSEREPORT-':
+            WINDOW.close()
+            break
 
 
 def _render(report, begin, end):
