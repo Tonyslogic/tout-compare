@@ -8,6 +8,7 @@ import PySimpleGUI as sg
 import os
 
 from numpy import disp
+from makedbFromEISmartDataFile import guiDBFromEISmartMeter
 
 from simulate import guiMain
 from fetchdata_gui import guiFetch
@@ -570,7 +571,7 @@ def _getLoadProfile():
         [sg.Text('===================================================', size=(50,1))],
         [sg.Button('Load profile from AlphaESS', key='-LOAD_ALPHA-', size=(25,1)), sg.Text("Requires AlphaESS login", size=(24,1))],
         [sg.Button('Generate profile', key='-LOAD_GENERATE-', size=(25,1)), sg.Text("Use this if you have no data", size=(24,1))],
-        [sg.Button('Load profile from Electric Ireland', key='-LOAD_EI-', size=(25,1), disabled=True), sg.Text("Requires smart meter data (login)", size=(24,1))],
+        [sg.Button('Load profile from Electric Ireland', key='-LOAD_EI-', size=(25,1), disabled=False), sg.Text("Requires smart meter data (login)", size=(24,1))],
         [sg.Button('OK', key='-OK-', size=(25,1))]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
@@ -586,9 +587,12 @@ def _getLoadProfile():
             _fetchAlphaData()
         if event == '-LOAD_GENERATE-': 
             _generateLoadProfile()
+        if event == '-LOAD_EI-': 
+            guiDBFromEISmartMeter(CONFIG)
         if event == '-OK-': 
             window.close()
             break
+    _setStatus()
     return
 
 def _getProviderRates():
