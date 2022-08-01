@@ -3,7 +3,7 @@ App that compares time of use tariffs for electricity with solar, inverter and b
 
 This is a work in progress. Be nice! It is useful now.
 
-I started this after installing solar panels, and getting a 'smart meter'. The smart meter opened up the wonerful world of, Time of Use Tariffs (TOUT). I was unable to find a comparison tool that took into account individual electricity usage, never mind the added complexity of solar panels, inverter, battery and getting paid for excess electricity generation (Feed-in tarrif). 
+I started this after installing solar panels, and getting a 'smart meter'. The smart meter opened up the wonderful world of, Time of Use Tariffs (TOUT). I was unable to find a comparison tool that took into account individual electricity usage, never mind the added complexity of solar panels, inverter, battery and getting paid for excess electricity generation (Feed-in tariff). 
 
 It's now at a point where it can be useful to those:
 * Thinking about getting set up for solar generation
@@ -32,8 +32,8 @@ The basic configuration is used to pick a storage locations. If the folders do n
 
 ![Basic configuration](./docs/BasicConfig.png)
 
-At this point, there is no other configurtion. There are two options:
-* Use demo data for a quick start (Click the 'Add Demo Data' button). You can then explore the rest of the configuraton and try out the simulate directly.
+At this point, there is no other configuration. There are two options:
+* Use demo data for a quick start (Click the 'Add Demo Data' button). You can then explore the rest of the configuration and try out the simulate directly.
 
 * Create your own configuration from scratch -- keep reading
 
@@ -68,7 +68,7 @@ It also requires how that load is distributed by calendar month, day of week, an
 
 ![Monthly distribution](./docs/ProfileWizard2.png)
 
-At this point the database contains load data (or if you used the AplhaESS integration, load and PV data). The main window will have been updated to reflec the status as you progress.
+At this point the database contains load data (or if you used the AplhaESS integration, load and PV data). The main window will have been updated to reflect the status as you progress.
 
 ![Main window status](./docs/MainScreenStatus.png)
 
@@ -89,7 +89,7 @@ There are a couple of things to note when editing the rates:
 ![Day profile edit](./docs/RateDateProfile.png)
 
 
-Once saved, the simulation option is avaialble. Before going there you can also add some default PV generation. To do this, use the 'Solar data' button. Right now there are two options. Loading the default will load the same solar data that is in the demo data. It automatically aligns day by day with the load profile data.
+Once saved, the simulation option is available. Before going there you can also add some default PV generation. To do this, use the 'Solar data' button. Right now there are two options. Loading the default will load the same solar data that is in the demo data. It automatically aligns day by day with the load profile data.
 
 ![Load default solar](./docs/LoadDefaultSolar.png)
 
@@ -103,7 +103,7 @@ The azimuth refers to the direction the panels will face 0=North, 90=East, etc.
 Panels ane Wp speak for themselves.
 You can add up to two strings here. If your inverter has two inputs, check 'Dedicated MPPT' so the strings are added together (as opposed to picking the best for any given 5 minute interval)
 
-Simulating is as simple as pressing the 'Simulate' button, providing a start date and length (from within the avaialble data). 
+Simulating is as simple as pressing the 'Simulate' button, providing a start date and length (from within the available data). 
 
 ![Simulation input](./docs/SimInput.png)
 
@@ -112,8 +112,34 @@ This will after a short while render a sortable table where the costs (of each s
 ![Example simulator output](./docs/SimOutput.png)
 
 # Design and dependencies
+The design is logically split into two: Data population and data processing.
 
-![Design](./docs/Design.png)
+In both cases, the entrypoint is toutc.py. The principle dependencies are shown in the diagrams below.
+
+## Data population
+![Design, population](./docs/Design.png)
+
+## Data processing
+![Design, processing](./docs/DesignProcessing.png)
+
+## DB Schema
+The database schema is very simple. There are only two tables. Each row in 'dailystats' describes a 5 minute interval. Each row of 'daylysums', represents the totals for a single day.
+
+![DB Schema](./docs/DBSchema.png)
+
+| Table      | Column      | Type | Description |
+| ---------- | ----------- | ---- | ----------- |
+| dailystats | Date        | TEXT | YYYY-MM-DD  |
+| dailystats | _min        | TEXT | hh:mm       |
+| dailystats | NormalLoad  | REAL | 5 minutes usage load (kWh)      |
+| dailystats | NormalPV    | REAL | 5 minutes PV generation (kWh) |
+| dailystats | MinuteOfDay | REAL | 0-1440      |
+| dailystats | DayOfWeek   | REAL | 0-6 (Sun -Sat)      |
+| dailysums  | Date        | TEXT | YYYY-MM-DD  |
+| dailysums  | PV          | REAL | Daily PV generation (kWh)  |
+| dailysums  | Load        | REAL | Daily usage load (kWh)  |
+
+The combination of 'Date' and '_min' in dailystats must be unique. 
 
 # Reward & recognition
 
