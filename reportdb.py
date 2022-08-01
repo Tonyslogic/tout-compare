@@ -23,8 +23,8 @@ def _monthlyLoad(dbFile, ax):
     df = None
     try:
         conn = sqlite3.connect(dbFile)
-        df = pd.read_sql_query(""" SELECT YEAR, M, MONTH, LOAD, (MONTH || ',' || YEAR) AS MY FROM (
-                        SELECT DISTINCT strftime('%Y', date) AS YEAR, strftime('%m', date) as M, 
+        df = pd.read_sql_query(""" SELECT YEAR, M, MONTH, LOAD, (YEAR || ',' || MONTH) AS MY FROM (
+                        SELECT DISTINCT strftime('%Y', date) AS YEAR, strftime('%m', date) AS MN, strftime('%m', date) as M, 
                         case cast (strftime('%m', date) as integer)
                             when 01 then 'Jan'
                             when 02 then 'Feb'
@@ -40,7 +40,7 @@ def _monthlyLoad(dbFile, ax):
                             when 12 then 'Dec'
                             else 'Mar' end as MONTH, 
                         SUM (Load) AS LOAD
-                        FROM dailysums GROUP BY M, YEAR ORDER BY M, YEAR ) """, conn)
+                        FROM dailysums GROUP BY M, YEAR ORDER BY M, YEAR ) ORDER BY YEAR, MN """, conn)
         pd.set_option("display.max.columns", None)
         df.head()
         df.plot(kind='bar',x='MY', y='LOAD', ax=ax, ylabel="kWH", title="Monthly load")
@@ -58,8 +58,8 @@ def _monthlyGen(dbFile, ax):
     df = None
     try:
         conn = sqlite3.connect(dbFile)
-        df = pd.read_sql_query(""" SELECT YEAR, M, MONTH, GEN, (MONTH || ',' || YEAR) AS MY FROM (
-                        SELECT DISTINCT strftime('%Y', date) AS YEAR, strftime('%m', date) as M, 
+        df = pd.read_sql_query(""" SELECT YEAR, M, MONTH, GEN, (YEAR || ',' || MONTH) AS MY FROM (
+                        SELECT DISTINCT strftime('%Y', date) AS YEAR, strftime('%m', date) AS MN, strftime('%m', date) as M, 
                         case cast (strftime('%m', date) as integer)
                             when 01 then 'Jan'
                             when 02 then 'Feb'
@@ -75,7 +75,7 @@ def _monthlyGen(dbFile, ax):
                             when 12 then 'Dec'
                             else 'Mar' end as MONTH, 
                         SUM (PV) AS GEN
-                        FROM dailysums GROUP BY M, YEAR ORDER BY M, YEAR ) """, conn)
+                        FROM dailysums GROUP BY M, YEAR ORDER BY M, YEAR ) ORDER BY YEAR, MN """, conn)
         pd.set_option("display.max.columns", None)
         df.head()
         df.plot(kind='bar',x='MY', y='GEN', ax=ax, ylabel="kWH", title="Monthly generation")
@@ -184,7 +184,7 @@ def display(config):
     plt.show()
 
 def main():
-    display()
+    display(CONFIG)
 
 if __name__ == "__main__":
     try:
