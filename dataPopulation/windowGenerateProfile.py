@@ -5,7 +5,7 @@ import copy
 import PySimpleGUI as sg 
 from collections import defaultdict
 
-from makedbFromProfile import _guiDBFromProfile
+from dataPopulation.makedbFromProfile import _guiDBFromProfile
 
 CONFIG = "C:\\dev\\solar\\"
 STORAGE = "C:\\dev\\solar\\"

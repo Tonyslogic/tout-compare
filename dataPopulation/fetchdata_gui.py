@@ -7,7 +7,7 @@ import datetime
 import json
 
 
-from alphaess.alphaess import alphaess
+from dataPopulation.alphaess.alphaess import alphaess
 
 CONFIG = "C:\\dev\\solar\\"
 

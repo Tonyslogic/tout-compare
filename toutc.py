@@ -8,19 +8,20 @@ import PySimpleGUI as sg
 import os
 
 from numpy import disp
-from makedbFromEISmartDataFile import guiDBFromEISmartMeter
 
-from simulate import guiMain
-from fetchdata_gui import guiFetch
-from makedb import guiMakeDB
-from makedbFromProfile import _guiDBFromProfile
-from windowGenerateProfile import genProfile, _saveProfile
-from windowRates import getRates, _updateRates
-from loadDefaultSolar import loadDefaultSolar
-from reportdb import display
-from pvgis2db import guiPVgis
-from demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
-from windowScenarios import getScenarios
+from dataProcessing.simulate import guiMain
+from dataProcessing.reportdb import display
+
+from dataPopulation.fetchdata_gui import guiFetch
+from dataPopulation.makedb import guiMakeDB
+from dataPopulation.makedbFromProfile import _guiDBFromProfile
+from dataPopulation.windowGenerateProfile import genProfile, _saveProfile
+from dataPopulation.windowRates import getRates, _updateRates
+from dataPopulation.makedbFromEISmartDataFile import guiDBFromEISmartMeter
+from dataPopulation.loadDefaultSolar import loadDefaultSolar
+from dataPopulation.pvgis2db import guiPVgis
+from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
+from dataPopulation.windowScenarios import getScenarios
 
 MAIN_WINDOW = None
 

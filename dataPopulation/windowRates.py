@@ -5,10 +5,10 @@ import copy
 import PySimpleGUI as sg 
 from collections import defaultdict
 
-from simulate import guiMain
-from fetchdata_gui import guiFetch
-from makedb import guiMakeDB
-from makedbFromProfile import _guiDBFromProfile
+from dataProcessing.simulate import guiMain
+from dataPopulation.fetchdata_gui import guiFetch
+from dataPopulation.makedb import guiMakeDB
+from dataPopulation.makedbFromProfile import _guiDBFromProfile
 
 MAIN_WINDOW = None
 

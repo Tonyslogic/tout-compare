@@ -6,8 +6,8 @@ import sqlite3
 from sqlite3 import Error
 import pandas as pd
 
-from solardaily import DAILY
-from solarsums import SUMS
+from dataPopulation.solardaily import DAILY
+from dataPopulation.solarsums import SUMS
 
 
 CONFIG = "C:\\dev\\solar\\"
