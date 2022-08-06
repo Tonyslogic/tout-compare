@@ -1,5 +1,6 @@
 from ast import keyword
 import copy
+import datetime
 import itertools
 import json
 from locale import locale_encoding_alias
@@ -131,15 +132,18 @@ def _loadSysConfig():
 def _loadRates():
     global STATUS_RATES
     data = {}
+    defaultRateDate = "2022-01-01"
+    r_file = os.path.join(CONFIG, "rates.json")
     try: 
-        with open(os.path.join(CONFIG, "rates.json"), 'r') as f:
+        defaultRateDate = datetime.datetime.fromtimestamp(os.path.getmtime(r_file)).strftime('%Y-%m-%d')
+        with open(r_file, 'r') as f:
            data = json.load(f)
         MAIN_WINDOW['-RATES_STAT-'].update(value="Found " + str(len(data)) + " pricing plans")
         STATUS_RATES = True
     except:
         MAIN_WINDOW['-RATES_STAT-'].update(value="No vendor rates defined")
         STATUS_RATES = False
-    return data
+    return data, defaultRateDate
 
 def _updateSysConfig(data):
     with open(os.path.join(CONFIG, "SystemProperties.json"), 'w') as f:
@@ -436,7 +440,7 @@ def _callSimulate():
             [sg.Text('=================================================================================================================', size=(100,1))],
             [sg.Text('Tariff rates to compare:', size=(50,1)), sg.Text('Scenarios to simulate:', size=(50,1))]
     ]
-    rates = _loadRates()
+    rates, defaultRateDate = _loadRates()
     sysProps = _loadSysConfig()
     scenarios = sysProps["Scenarios"]
     for index, combination in enumerate(itertools.zip_longest(rates, scenarios, fillvalue=None)):
@@ -448,6 +452,9 @@ def _callSimulate():
             rate = combination[0]["Supplier"] + "," + combination[0]["Plan"]
             try: rateActive = combination[0]["Active"]
             except: rateActive = True
+            try: rateDate = combination[0]["LastUpdate"]
+            except: rateDate = defaultRateDate
+            rate = rate + " [" + rateDate + "]"
             rateKey = '-RATE-'+ str(index)
             rateDisabled = False
         scenario = "--"

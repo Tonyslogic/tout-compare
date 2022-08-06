@@ -1,3 +1,4 @@
+import datetime
 import json
 from locale import locale_encoding_alias
 import os
@@ -19,13 +20,22 @@ DBFILE = "SimData.db"
 def _loadRates():
     STATUS_RATES = False
     data = []
+    defaultRateDate = "2022-01-01"
+    r_file = os.path.join(CONFIG, "rates.json")
     try: 
+        defaultRateDate = datetime.datetime.fromtimestamp(os.path.getmtime(r_file)).strftime('%Y-%m-%d')
         with open(os.path.join(CONFIG, "rates.json"), 'r') as f:
            data = json.load(f)
         STATUS_RATES = True
     except:
         STATUS_RATES = False
-    return STATUS_RATES, data
+    return STATUS_RATES, data, defaultRateDate
+
+def _loadImportFile(importFile):
+    data = []
+    with open(os.path.join(CONFIG, importFile), 'r') as f:
+        data = json.load(f)
+    return data
 
 def  _updateRates(rates):
     with open(os.path.join(CONFIG, "rates.json"), 'w') as f:
@@ -57,7 +67,7 @@ def _getHourlyRates(rateRange):
     # print (hourlyRates)
     return hourlyRates
 
-def _renderOneRatePlan(ratePlan):
+def _renderOneRatePlan(ratePlan, defaultRatePlan):
     updateDisabled = False
     saveStatus = ""
     plan = ratePlan["Plan"]
@@ -73,6 +83,10 @@ def _renderOneRatePlan(ratePlan):
         bonus = 0
         supplier = "Unknown"
         rateEntries = []
+    try: rateDate = ratePlan["LastUpdate"]
+    except: rateDate = defaultRatePlan
+    try: reference = ratePlan["Reference"]
+    except: reference = ""
     left_col = [
             [sg.Text('Provide details of the supplier/plan. The data for this comes from the supplier, or comparison web site. Feel free to use the with or without tax figure, but be consistent', size=(86,2))],
             [sg.Text('======================================================================================', size=(86,1))],
@@ -81,6 +95,8 @@ def _renderOneRatePlan(ratePlan):
             [sg.Text('Feed-in rate (c)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-RATE_PLAN_FEED-', default_text=feed)],
             [sg.Text('Standing charges (€)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-RATE_PLAN_STANDING-', default_text=standing)],
             [sg.Text('Sign up bonus (€)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-RATE_PLAN_BONUS-', default_text=bonus)],
+            [sg.Text('Last update', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-RATE_PLAN_DATE-', default_text=rateDate)],
+            [sg.Text('Reference', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-RATE_PLAN_REF-', default_text=reference)],
             [sg.Text('======================================================================================', size=(86,1))],
             [sg.Text('The plan must include at least one day profile. Day profiles are separated by \'====\'. Additional day profiles are needed for weekend rates. Between all day profiles, each day must be covered. The hourly ranges in each day profile must cover the full 24 hours. The end of one range must be the start of the next. Hours are integer values.', size=(86,3))],
             [sg.Text('You can add a range to a day profile by populating the fields (making sure the \'From\' is the same as the previous \'To\') below the \'-----\' and pressing \'Add\'. Note that the costs of adjacent ranges must be different, or they will be merged. Similarly make sure the times and costs line up before deleting a range.', size=(86,3))],
@@ -205,9 +221,9 @@ def _scrapeNewRange(index, values):
     rng = {"begin": begin, "end": end, "price": price}
     return rng
 
-def _editRatePlan(ratePlan):
+def _editRatePlan(ratePlan, defaulteRateDate):
     oldRatePlan = copy.deepcopy(ratePlan)
-    ratePlanWindow = _renderOneRatePlan(ratePlan)
+    ratePlanWindow = _renderOneRatePlan(ratePlan, defaulteRateDate)
     while True:
         event, values = ratePlanWindow.read()
         if event in (sg.WIN_CLOSED, 'Exit'): 
@@ -241,7 +257,7 @@ def _editRatePlan(ratePlan):
                 ratePlan["Rates"][dtindex]["Days"] = latestDayTypes[str(dtindex)]
                 _getSimpleProps(ratePlan, values)
                 ratePlanWindow.close()
-                ratePlanWindow = _renderOneRatePlan(ratePlan)
+                ratePlanWindow = _renderOneRatePlan(ratePlan, defaulteRateDate)
             if str(event).startswith('-ADD_HR_RANGE-'): 
                 index = int(event[-1])
                 latestRanges = _scrapeLatestRateRange(values)
@@ -253,12 +269,12 @@ def _editRatePlan(ratePlan):
                 ratePlan["Rates"][index]["Days"] = latestDayTypes[str(index)]
                 _getSimpleProps(ratePlan, values)
                 ratePlanWindow.close()
-                ratePlanWindow = _renderOneRatePlan(ratePlan)
+                ratePlanWindow = _renderOneRatePlan(ratePlan, defaulteRateDate)
             if str(event).startswith('-DEL_DAY_PROFILE'):
                 index = int(event[-1])
                 del ratePlan["Rates"][index]
                 ratePlanWindow.close()
-                ratePlanWindow = _renderOneRatePlan(ratePlan)
+                ratePlanWindow = _renderOneRatePlan(ratePlan, defaulteRateDate)
             if str(event).startswith('-ADD_DAY_RATE-'):
                 if "Rates" not in ratePlan.keys(): ratePlan["Rates"] = [] 
                 _getSimpleProps(ratePlan, values)
@@ -274,7 +290,7 @@ def _editRatePlan(ratePlan):
                 ratePlan["Rates"].append({"Days": [0,1,2,3,4,5,6], "Hours": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]})
                 _getSimpleProps(ratePlan, values)
                 ratePlanWindow.close()
-                ratePlanWindow = _renderOneRatePlan(ratePlan)
+                ratePlanWindow = _renderOneRatePlan(ratePlan, defaulteRateDate)
         except:
             ratePlanWindow['-UPDATE_RATE_PLAN-'].update(disabled=True)
         if event == '-UPDATE_RATE_PLAN-': 
@@ -301,11 +317,15 @@ def _getSimpleProps(ratePlan, values):
     feed = float(values["-RATE_PLAN_FEED-"])
     standing = float(values["-RATE_PLAN_STANDING-"])
     bonus = float(values["-RATE_PLAN_BONUS-"])
+    rateDate = values["-RATE_PLAN_DATE-"]
+    reference = values["-RATE_PLAN_REF-"]
     ratePlan["Supplier"] = supplier
     ratePlan["Plan"] = plan
     ratePlan["Feed"] = feed
     ratePlan["Standing charges"] = standing
     ratePlan["Bonus cash"] = bonus
+    ratePlan["LastUpdate"] = rateDate
+    ratePlan["Reference"]  = reference
 
 def _renderRatePlanNav(ratePlans):
     saveDisabled = False
@@ -325,23 +345,26 @@ def _renderRatePlanNav(ratePlans):
         )
     left_col.append([])
     left_col.append([sg.Text('==============================================================================', size=(80,1))])
-    left_col.append([sg.Text("New supplier", size=(25,1)), sg.Button('Create new plan', size=(24,1), key='-ADD_RATE_PLAN-'), sg.In(size=(24,1), enable_events=True ,key='-NEW_RATE_PLAN_NAME-', default_text="<New plan name>")])
+    left_col.append([sg.Text("New supplier", size=(25,1)), sg.Button('Create new plan', size=(24,1), key='-ADD_RATE_PLAN-'), sg.In(size=(28,1), enable_events=True ,key='-NEW_RATE_PLAN_NAME-', default_text="<New plan name>")])
+    left_col.append([sg.Text("Import rate file", size=(25,1)), sg.In(size=(28,1), enable_events=True ,key='-R_FILE-', default_text=CONFIG), sg.FileBrowse(), sg.Button('Import', size=(16,1), key='-IMPORT_RATES-')])
+    left_col.append([sg.Text('==============================================================================', size=(80,1))])
     left_col.append([sg.Button('Save', size=(24,1), key='-SAVE_RATE_PLAN-', disabled=saveDisabled)])
-    layout = [[sg.Column(left_col, element_justification='l')]]    
+    # layout = [[sg.Column(left_col, element_justification='l')]]    
+    layout = [[sg.Column(left_col, element_justification='l', size=(650, 500), expand_y=True, scrollable=True,  vertical_scroll_only=True)]]  
     window = sg.Window('Rates navigation', layout,resizable=True)
     return window
 
 def getRates(config):
     global CONFIG
     CONFIG = config
-    status, rates = _loadRates()
+    status, rates, defaultRateDate = _loadRates()
     nav_window = _renderRatePlanNav(rates)
     while True:
         event, values = nav_window.Read()
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if str(event).startswith('-EDIT_RATE_PLAN_'):
             ratePlanIndex = int(event[-2])
-            updatedRatePlan = _editRatePlan(rates[ratePlanIndex])
+            updatedRatePlan = _editRatePlan(rates[ratePlanIndex], defaultRateDate)
             rates[ratePlanIndex] = updatedRatePlan
             nav_window.close()
             nav_window = _renderRatePlanNav(rates)
@@ -359,8 +382,14 @@ def getRates(config):
                 "Bonus cash": 0,
                 "Supplier": "Unknown",
                 "Rates": [],
-                "Active": True
+                "Active": True,
+                "LastUpdate": datetime.datetime.today().strftime('%Y-%m-%d')
                 })
+            nav_window.close()
+            nav_window = _renderRatePlanNav(rates)
+        if event == '-IMPORT_RATES-': 
+            importFile = values['-R_FILE-']
+            rates.extend(_loadImportFile(importFile))
             nav_window.close()
             nav_window = _renderRatePlanNav(rates)
         if event == '-SAVE_RATE_PLAN-': 
