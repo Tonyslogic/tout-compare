@@ -11,7 +11,7 @@ It's now at a point where it can be useful to those:
 * Who have a smart meter and want to compare the different supplier options
 * Wondering about how charging an electric car at home will impact the bill
 
-There is some setup involved as the data must reflect your electricity usage for the cost generation/comparison to be meaningful. Getting started is easy enough, just begin at the top and work your way down. Defaults are provided for everything except rates. These change too quickly to be included here.
+There is some setup involved as the data must reflect your electricity usage for the cost generation/comparison to be meaningful. Getting started is easy enough, just begin at the top and work your way down. Defaults are provided for everything except rates. These change too quickly to be included here. You can find a 'rates.json' in the git repo. It includes the date each rate was added, and the source of the information. It can be imported by the rate editor.
 
 # Installation
 

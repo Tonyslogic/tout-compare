@@ -14,7 +14,7 @@ if sys.platform == "win32":
 
 setup(
     name="tout-compare",
-    version="0.0.10",
+    version="0.0.11",
     description="Compare TOUT electricity tariffs",
     options={
         "build_exe": build_exe_options

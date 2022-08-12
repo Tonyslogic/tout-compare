@@ -33,12 +33,21 @@ def _loadRates():
 
 def _loadImportFile(importFile):
     data = []
-    with open(os.path.join(CONFIG, importFile), 'r') as f:
-        data = json.load(f)
+    try: 
+        with open(os.path.join(CONFIG, importFile), 'r') as f:
+            data = json.load(f)
+    except: pass
+    for rate in data:
+        try: d = rate["LastUpdate"]
+        except: rate["LastUpdate"] = datetime.datetime.today().strftime('%Y-%m-%d')
     return data
 
 def  _updateRates(rates):
-    with open(os.path.join(CONFIG, "rates.json"), 'w') as f:
+    r_file = os.path.join(CONFIG, "rates.json")
+    for rate in rates:
+        try: d = rate["LastUpdate"]
+        except: rate["LastUpdate"] = datetime.datetime.fromtimestamp(os.path.getmtime(r_file)).strftime('%Y-%m-%d')
+    with open(r_file, 'w') as f:
         json.dump(rates, f)
     return
 
