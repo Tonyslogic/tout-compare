@@ -16,7 +16,7 @@ There is some setup involved as the data must reflect your electricity usage for
 # Installation
 
 ## If you have python
-Just clone the repo and run the toutc.py script
+Just clone the repo, install the modules in requirements.txt and run the toutc.py script
 
 ## Using the installer
 Download the installer, install and execute toutc.exe

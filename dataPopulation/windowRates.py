@@ -44,9 +44,11 @@ def _loadImportFile(importFile):
 
 def  _updateRates(rates):
     r_file = os.path.join(CONFIG, "rates.json")
+    if not os.path.isfile(r_file): return
     for rate in rates:
         try: d = rate["LastUpdate"]
-        except: rate["LastUpdate"] = datetime.datetime.fromtimestamp(os.path.getmtime(r_file)).strftime('%Y-%m-%d')
+        except: 
+            rate["LastUpdate"] = datetime.datetime.fromtimestamp(os.path.getmtime(r_file)).strftime('%Y-%m-%d')
     with open(r_file, 'w') as f:
         json.dump(rates, f)
     return

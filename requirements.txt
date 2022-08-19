@@ -1,0 +1,6 @@
+PySimpleGUI
+numpy
+pandas
+matplotlib
+aiohttp
+voluptuous
