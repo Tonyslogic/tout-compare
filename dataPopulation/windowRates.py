@@ -3,6 +3,7 @@ import json
 from locale import locale_encoding_alias
 import os
 import copy
+from pathlib import Path
 import PySimpleGUI as sg 
 from collections import defaultdict
 
@@ -44,7 +45,7 @@ def _loadImportFile(importFile):
 
 def  _updateRates(rates):
     r_file = os.path.join(CONFIG, "rates.json")
-    if not os.path.isfile(r_file): return
+    if not os.path.isfile(r_file): Path(r_file).touch()
     for rate in rates:
         try: d = rate["LastUpdate"]
         except: 
