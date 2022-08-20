@@ -370,10 +370,12 @@ def _renderScenarioNav(scenarios):
         saveDisabled = True
     for i, scenario in enumerate(scenarios):
         name = scenario["Name"]
-        deleteKey = '-DELETE_SCENARIO_'+ str(i) +'-'
         left_col.append(
-            [sg.Button(name, size=(24,1), key='-EDIT_SCENARIO_'+ str(i) +'-'), sg.Button("Delete", size=(24,1), key=deleteKey)]
-        )
+            [sg.Text(name, size=(24,1)), 
+            sg.Button("Edit", size=(5,1), key='-EDIT_SCENARIO_'+ str(i) +'-'), 
+            sg.Button("Copy", size=(5,1), key='-COPY_SCENARIO_'+ str(i) +'-'),
+            sg.Button("Delete", size=(7,1), key='-DELETE_SCENARIO_'+ str(i) +'-')
+            ])
     left_col.append([])
     left_col.append([sg.Text('===================================================', size=(50,1))])
     left_col.append([sg.Button('Add a new scenario', size=(24,1), key='-ADD_SCENARIO-'), sg.In(size=(24,1), enable_events=True ,key='-NEW_SCENARIO_NAME-', default_text="<New scenario name>")])
@@ -403,6 +405,13 @@ def getScenarios(config):
         if str(event).startswith('-DELETE_SCENARIO_'):
             index = int(event[-2])
             del scenarios[index]
+            nav_window.close()
+            nav_window = _renderScenarioNav(scenarios)
+        if str(event).startswith('-COPY_SCENARIO_'):
+            scenarioIndex = int(event[-2])
+            thecopy = copy.deepcopy(scenarios[scenarioIndex])
+            thecopy["Name"] += "(copy)"
+            scenarios.append(thecopy)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
         if event == '-ADD_SCENARIO-': 
