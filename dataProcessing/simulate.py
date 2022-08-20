@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import logging
 import json
 import os
@@ -502,8 +503,125 @@ def _render(report, begin, end):
                                 int(scenario["Totals"]["totalEVDiv"]) ])
     _renderSimpleGUI(chartDataII, begin, end)
 
+def _saveScenario(dbFile, md5, scenario):
+    ret = None
+    conn = None
+    try:
+        conn = sqlite3.connect(dbFile)
+        conn.execute("CREATE TABLE IF NOT EXISTS scenarios ( \
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
+                        md5 TEXT UNIQUE NOT NULL, \
+                        name TEXT UNIQUE NOT NULL, \
+                        json TEXT NOT NULL);")
+        conn.commit()
+        c = conn.cursor()
+        c.execute('INSERT INTO scenarios (md5, name, json) VALUES(?,?,?);', (md5, scenario["Name"], json.dumps(scenario, sort_keys=True).encode('utf-8')))
+        ret = c.lastrowid
+        conn.commit()
+        conn.close()
+    except Error as e:
+        print(e)
+    return ret
 
-def guiMain(config, begin, end):
+def _saveScenarioData(dbFile, scenarioID, simulation_output):
+    # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV
+    conn = None
+    try:
+        conn = sqlite3.connect(dbFile)
+        conn.execute("CREATE TABLE IF NOT EXISTS scenariodata ( \
+                        scenarioID INTEGER NOT NULL, \
+                        Date TEXT NOT NULL, \
+                        MinuteOfDay INTEGER DEFAULT '', \
+                        DayOfWeek INTEGER DEFAULT '', \
+                        Feed REAL    NOT NULL, \
+                        Buy REAL    NOT NULL, \
+                        SOC REAL    NOT NULL, \
+                        DirectEVcharge REAL    NOT NULL, \
+                        waterTemp REAL    NOT NULL, \
+                        kWHDivToWater REAL    NOT NULL, \
+                        kWHDivToEV REAL    NOT NULL \
+                        );")
+        conn.commit()
+        c = conn.cursor()
+        sql = "INSERT INTO scenariodata VALUES(" + str(scenarioID) + ",?,?,?,?,?,?,?,?,?,?);"
+        c.executemany(sql, simulation_output)
+        conn.commit()
+        conn.close()
+    except Error as e:
+        print(e)
+    
+    return
+
+def _saveTotals(dbFile, scenarioID, totals):
+    # totals = {"totalFeed": 0, "totalBuy": 0, "totalEV": 0, "totalHWDiv": 0, "totalHWDNeed": 0, "totalEVDiv": 0}
+    tots = [totals["totalFeed"], totals["totalBuy"], totals["totalEV"], totals["totalHWDiv"], totals["totalHWDNeed"], totals["totalEVDiv"]]
+    conn = None
+    try:
+        conn = sqlite3.connect(dbFile)
+        conn.execute("CREATE TABLE IF NOT EXISTS scenarioTotals ( \
+                        scenarioID INTEGER NOT NULL, \
+                        totalFeed REAL NOT NULL, \
+                        totalBuy REAL NOT NULL, \
+                        totalEV REAL NOT NULL, \
+                        totalHWDiv REAL NOT NULL, \
+                        totalHWDNeed REAL NOT NULL, \
+                        totalEVDiv REAL NOT NULL \
+                        );")
+        conn.commit()
+        c = conn.cursor()
+        sql = "INSERT INTO scenarioTotals VALUES(" + str(scenarioID) + ",?,?,?,?,?,?);"
+        c.execute(sql, tots)
+        conn.commit()
+        conn.close()
+    except Error as e:
+        # print(totals)
+        print(e)
+    return
+
+def _md5(scenario):
+    return hashlib.md5(json.dumps(scenario, sort_keys=True).encode('utf-8')).hexdigest()
+
+def _saveScenarioAndData(scenario, simulation_output, totals, dbFile):
+    scenario_md5 = _md5(scenario)
+    scenarioID = _saveScenario(dbFile, scenario_md5, scenario)
+    if scenarioID is not None: 
+        _saveScenarioData(dbFile, scenarioID, simulation_output)
+        _saveTotals(dbFile, scenarioID, totals)
+    return
+
+def _loadScenarioFromDB(dbFile, scenario):
+    foundInDB = False
+    res = []
+    totals = {}
+    md5 = _md5(scenario)
+    sql_data = "SELECT Date, MinuteOfDay, DayOfWeek, Feed, Buy, SOC, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV \
+                FROM scenariodata, scenarios WHERE md5 = '" + md5 + "' AND scenarios.id = scenariodata.scenarioID \
+                ORDER BY Date, MinuteOfDay ASC"
+    sql_total = "SELECT totalFeed, totalBuy, totalEV, totalHWDiv, totalHWDNeed, totalEVDiv \
+                FROM scenarioTotals, scenarios WHERE md5 = '" + md5 + "' AND scenarios.id = scenarioTotals.scenarioID"
+    conn = None
+    try:
+        conn = sqlite3.connect(dbFile)
+        c = conn.cursor()
+        c.execute(sql_total)
+        tots = c.fetchone()
+        if tots is not None: 
+            totals["totalFeed"] = tots[0]
+            totals["totalBuy"] = tots[1]
+            totals["totalEV"] = tots[2]
+            totals["totalHWDiv"] = tots[3]
+            totals["totalEVDiv"] = tots[4]
+            totals["totalHWDNeed"] = tots[5]
+            c.execute(sql_data)
+            res = c.fetchall()
+            foundInDB = True
+            print("\tLoaded " + scenario["Name"] + " from DB")
+    except Error as e:
+        # print(totals)
+        print("\tScenario not found in DB: " + str(e))
+    return foundInDB, res, totals
+
+def guiMain(config, begin, end, save):
     global CONFIG
     CONFIG = config
     start = datetime.datetime.strptime(begin, '%Y-%m-%d')
@@ -522,13 +640,16 @@ def guiMain(config, begin, end):
     report = []
     for scenario in scenarios:
         active = False
-        try:
-            active = scenario["Active"]
-        except:
-            pass
+        try: active = scenario["Active"]
+        except: pass
         if not active: continue
         sName = _loadScenario(scenario)
-        res, totals = _simulate(df, start, finish)
+        
+        foundInDB, res, totals = _loadScenarioFromDB(dbFile, scenario)
+        if not foundInDB:
+            res, totals = _simulate(df, start, finish)
+            if save: _saveScenarioAndData(scenario, res, totals, dbFile)   
+        
         prices = _showMeTheMoney(res, pricePlans)
         report.append({"Scenario": sName, "Totals": totals, "Plan Costs": prices})
     
@@ -537,7 +658,7 @@ def guiMain(config, begin, end):
 def main():
     begin = input("Start date (YYYY-MM-DD): ")
     end = input("Number of months to simulate: ")
-    guiMain(begin, end)
+    guiMain(CONFIG, begin, end, False)
     
 if __name__ == "__main__":
     try:

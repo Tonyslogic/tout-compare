@@ -433,10 +433,11 @@ def _callSimulate():
     end = 12
     left_col = [
              [sg.Text('Start date', size=(24,1)), 
-             sg.In(size=(25,1), enable_events=True ,key='-CAL-', default_text=begin), 
-             sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, 
-                                key='-CAL1-', format=('%Y-%m-%d'))],
-            [sg.Text('Number of months to simulate', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12")],
+                sg.In(size=(25,1), enable_events=True ,key='-CAL-', default_text=begin), 
+                sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, key='-CAL1-', format=('%Y-%m-%d'))],
+            [sg.Text('Number of months to simulate', size=(24,1)), 
+                sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12"),
+                sg.Checkbox("Save sim data", size=(24,1), default=True, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-')],
             [sg.Text('=================================================================================================================', size=(100,1))],
             [sg.Text('Tariff rates to compare:', size=(50,1)), sg.Text('Scenarios to simulate:', size=(50,1))]
     ]
@@ -484,6 +485,7 @@ def _callSimulate():
         if event == '-SIM_MONTHS-': end = values['-SIM_MONTHS-']
         if event == '-SIM_OK-': 
             # print(values)
+            save = False
             for key, value in values.items():
                 if str(key).startswith('-RATE-'):
                     rateIndex = int(key[-1])
@@ -491,11 +493,13 @@ def _callSimulate():
                 if str(key).startswith('-SCENARIO-'):
                     scenarioIndex = int(key[-1])
                     scenarios[scenarioIndex]["Active"] = value
+                if str(key) == '-SAVE_SIM_OUTPUT-':
+                    save = value
             sysProps["Scenarios"] = scenarios
             _updateSysConfig(sysProps)
             _updateRates(rates)
             window.close()
-            guiMain(CONFIG, begin, end)
+            guiMain(CONFIG, begin, end, save)
             break
 
 
