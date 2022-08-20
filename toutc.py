@@ -437,7 +437,7 @@ def _callSimulate():
                 sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, key='-CAL1-', format=('%Y-%m-%d'))],
             [sg.Text('Number of months to simulate', size=(24,1)), 
                 sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12"),
-                sg.Checkbox("Save sim data", size=(24,1), default=True, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-')],
+                sg.Checkbox("Save sim data", size=(24,1), default=False, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-')],
             [sg.Text('=================================================================================================================', size=(100,1))],
             [sg.Text('Tariff rates to compare:', size=(50,1)), sg.Text('Scenarios to simulate:', size=(50,1))]
     ]

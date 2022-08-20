@@ -141,6 +141,9 @@ The database schema is very simple. There are only two tables. Each row in 'dail
 
 The combination of 'Date' and '_min' in dailystats must be unique. 
 
+### Saved simulation data
+![Saved simulation data](./docs/scenarioSchema.png)
+
 # Reward & recognition
 
 If you like this, or better yet, it saves you some money please consider Starring the repository. If you are feeling generous, consider donating to a charity of you choice. My choice is https://joinourboys.org/
