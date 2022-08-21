@@ -1,7 +1,10 @@
+import hashlib
 import json
 from locale import locale_encoding_alias
 import os
 import copy
+import sqlite3
+from sqlite3 import Error
 import PySimpleGUI as sg 
 from collections import defaultdict
 
@@ -384,6 +387,46 @@ def _renderScenarioNav(scenarios):
     window = sg.Window('Scenario navigation', layout,resizable=True)
     return window
 
+def _getActiveMD5(scenario):
+    # only active scenarios are persisted
+    active = True
+    try: active = scenario["Active"]
+    except: pass
+    scenario["Active"] = True
+    ret = hashlib.md5(json.dumps(scenario, sort_keys=True).encode('utf-8')).hexdigest()
+    scenario["Active"] = active
+    return ret
+
+def _deleteScenarioFromDB(md5):
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
+        env = json.load(f)
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
+
+    d1 = "DELETE FROM scenariodata WHERE scenarioID = (SELECT id FROM scenarios WHERE md5 = '" + md5 + "');"
+    d2 = "DELETE FROM scenarioTotals WHERE scenarioID = (SELECT id FROM scenarios WHERE md5 = '" + md5 + "');"
+    d3 = "DELETE FROM scenarios WHERE md5 = '" + md5 + "';"
+
+    conn = None
+    try:
+        conn = sqlite3.connect(dbFile)
+        c = conn.cursor()
+        c.execute(d1)
+        c.execute(d2)
+        c.execute(d3)
+        conn.commit()
+        conn.close()
+    except Error as e:
+        print(e)
+    return
+
+def _getOldmd5s(scenarios):
+    old_md5s = {}
+    
+    for idx, scenario in enumerate(scenarios): 
+        old_md5s[idx] = _getActiveMD5(scenario)
+
+    return old_md5s
+
 def getScenarios(config):
     global CONFIG
     CONFIG = config
@@ -392,6 +435,7 @@ def getScenarios(config):
         scenarios = data["Scenarios"]
     except:
         scenarios = []
+    old_md5s = _getOldmd5s(scenarios)
     nav_window = _renderScenarioNav(scenarios)
     while True:
         event, values = nav_window.Read()
@@ -399,12 +443,17 @@ def getScenarios(config):
         if str(event).startswith('-EDIT_SCENARIO_'):
             scenarioIndex = int(event[-2])
             updatedScenario = _editScenario(scenarios[scenarioIndex])
+            if _getActiveMD5(updatedScenario) not in old_md5s.values():
+                _deleteScenarioFromDB(old_md5s[scenarioIndex])
             scenarios[scenarioIndex] = updatedScenario
+            old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
         if str(event).startswith('-DELETE_SCENARIO_'):
             index = int(event[-2])
             del scenarios[index]
+            _deleteScenarioFromDB(old_md5s[index])
+            old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
         if str(event).startswith('-COPY_SCENARIO_'):
@@ -412,6 +461,7 @@ def getScenarios(config):
             thecopy = copy.deepcopy(scenarios[scenarioIndex])
             thecopy["Name"] += "(copy)"
             scenarios.append(thecopy)
+            old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
         if event == '-ADD_SCENARIO-': 
@@ -422,6 +472,7 @@ def getScenarios(config):
                 "Discharge stop": 19.6,
                 "LoadShift": [],
                 "CarCharge": []})
+            old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
         if event == '-SAVE_SCENARIOS-': 
