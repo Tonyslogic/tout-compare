@@ -47,6 +47,9 @@ def _processOneRow(soc, load, pv, cfg):
     newSOC = soc
     feed = 0
     buy = 0
+    pvToCharge = 0
+    pvToLoad = 0
+    batToLoad = 0
 
     pv = pv * PV_GEN_MODIFIER
 
@@ -58,17 +61,24 @@ def _processOneRow(soc, load, pv, cfg):
 
     if load > available:
         buy = load - available
-        if not cfg: newSOC = soc - batAvailable * CHARGING_LOSS_FACTOR  
+        pvToLoad = pv
+        if not cfg: 
+            newSOC = soc - batAvailable * CHARGING_LOSS_FACTOR 
+            batToLoad = batAvailable * CHARGING_LOSS_FACTOR 
     else: # we cover the load without the grid
         if load > pv:
+            pvToLoad = pv
             if not cfg: 
                 newSOC = soc - (load - pv) * CHARGING_LOSS_FACTOR
+                batToLoad = (load - pv) * CHARGING_LOSS_FACTOR
             else: 
                 buy = load - pv
         else: # there is extra pv to charge/feed
+            pvToLoad = load
             if ((pv - load) > IGNORE_LEVEL):
                 if not cfg: 
                     charge = min((pv - load), batChargeAvailable)
+                    pvToCharge = charge
                     newSOC = soc + charge
                     feed = pv - load - charge
                     if MAX_INVERTER_LOAD < feed + charge:
@@ -79,7 +89,7 @@ def _processOneRow(soc, load, pv, cfg):
                     feed = min(pv - load, MAX_INVERTER_LOAD)
                 feed = feed * FEED_MODIFIER
 
-    return newSOC, feed, buy
+    return newSOC, feed, buy, pvToCharge, pvToLoad, batToLoad
 
 def _getCFG(date, minuteOfDay, soc):
     cfg = False
@@ -190,12 +200,13 @@ def _simulate(df, start, finish):
             # TODO: Add the car load here
             carload = _getCarLoad(r[2], r[4], r[3])
             # newSOC, feed, buy = _processOneRow(soc, load, pv, cfg):
-            newSOC, feed, buy = _processOneRow(newSOC, r[0] + cfgload + carload, r[1], cfg)
+            newSOC, feed, buy, pvToCharge, pvToLoad, batToLoad = _processOneRow(newSOC, r[0] + cfgload + carload, r[1], cfg)
             # see if there any diversions in place, and reduce feed. Track dailymax EV and daily usage for water
             hw_d, ev_d, dailyDiversionTotals = _divert(feed, r[2], r[3], r[4], dailyDiversionTotals)
             feed = feed - (hw_d + ev_d)
             hwt = dailyDiversionTotals[r[2]]["HWTemp"]
-            res.append((r[2], r[3], r[4], feed, buy, newSOC, carload, hwt, hw_d, ev_d)) # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV
+            # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, pvToCharge, pvToLoad, batToLoad, pv
+            res.append((r[2], r[3], r[4], feed, buy, newSOC, carload, hwt, hw_d, ev_d, pvToCharge, pvToLoad, batToLoad, r[1])) 
             totals["totalFeed"] += feed
             totals["totalBuy"] += buy
             totals["totalEV"] += carload
@@ -524,10 +535,21 @@ def _saveScenario(dbFile, md5, scenario):
     return ret
 
 def _saveScenarioData(dbFile, scenarioID, simulation_output):
-    # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV
+    # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, pvToCharge, pvToLoad, batToLoad, pv
     conn = None
     try:
         conn = sqlite3.connect(dbFile)
+        
+        try: 
+            c = conn.cursor()
+            c.execute('ALTER TABLE scenariodata ADD COLUMN pvToCharge REAL NOT NULL DEFAULT 0;')
+            c.execute('DROP TABLE scenarios ;')
+            c.execute('DROP TABLE scenariodata;')
+            c.execute('DROP TABLE scenarioTotals;')
+            conn.commit()
+            print ("\tDropped tables from old version")
+        except: pass 
+
         conn.execute("CREATE TABLE IF NOT EXISTS scenariodata ( \
                         scenarioID INTEGER NOT NULL, \
                         Date TEXT NOT NULL, \
@@ -539,11 +561,15 @@ def _saveScenarioData(dbFile, scenarioID, simulation_output):
                         DirectEVcharge REAL    NOT NULL, \
                         waterTemp REAL    NOT NULL, \
                         kWHDivToWater REAL    NOT NULL, \
-                        kWHDivToEV REAL    NOT NULL \
+                        kWHDivToEV REAL    NOT NULL, \
+                        pvToCharge REAL    NOT NULL, \
+                        pvToLoad REAL    NOT NULL, \
+                        batToLoad REAL    NOT NULL, \
+                        pv REAL NOT NULL \
                         );")
         conn.commit()
         c = conn.cursor()
-        sql = "INSERT INTO scenariodata VALUES(" + str(scenarioID) + ",?,?,?,?,?,?,?,?,?,?);"
+        sql = "INSERT INTO scenariodata VALUES(" + str(scenarioID) + ",?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
         c.executemany(sql, simulation_output)
         conn.commit()
         conn.close()

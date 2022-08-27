@@ -437,7 +437,7 @@ def _callSimulate():
                 sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, key='-CAL1-', format=('%Y-%m-%d'))],
             [sg.Text('Number of months to simulate', size=(24,1)), 
                 sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12"),
-                sg.Checkbox("Save sim data", size=(24,1), default=False, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-')],
+                sg.Checkbox("Save sim data", size=(24,1), default=True, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-')],
             [sg.Text('=================================================================================================================', size=(100,1))],
             [sg.Text('Tariff rates to compare:', size=(50,1)), sg.Text('Scenarios to simulate:', size=(50,1))]
     ]
@@ -513,7 +513,7 @@ def _mainWin():
             [sg.Button('Usage profile', key='-PROFILE-', size=(25,1)), sg.Text("Checking...", size=(40,1), key='-PROFILE_STAT-')],
             [sg.Button('Solar data', key='-SOLAR_DATA-', size=(25,1), disabled=False), sg.Text("Checking...", size=(40,1), key='-SOLAR_DATA_STAT-')],
             [sg.Button('Provider rates', key='-RATES-', size=(25,1), disabled=False), sg.Text("Checking...", size=(24,1), key='-RATES_STAT-')],
-            [sg.Button('Show load graphs', key='-REPORTDB-', size=(25,1), disabled=True), sg.Button('Simulate', key='-SIMULATE-', size=(25,1), disabled=True)],
+            [sg.Button('Data visualization', key='-REPORTDB-', size=(25,1), disabled=True), sg.Button('Compare', key='-SIMULATE-', size=(25,1), disabled=True)],
             [sg.Button('Exit', key='-EXIT-', size=(25,1))]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
