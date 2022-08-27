@@ -111,6 +111,15 @@ This will after a short while render a sortable table where the costs (of each s
 
 ![Example simulator output](./docs/SimOutput.png)
 
+If you saved simulation data (the default) then you can visualise the results for each scenario:
+![Visualisation, Navigation](./docs/visNavigation.png)
+
+The 'Load profile & PV data graphs' show electricity usage (by hour, day and month) and PV generation by month
+![Visulaisation, Load profile](./docs/VisLoadProfile.png)
+
+Selecting a saved simulation from the drop-down and clicking on 'Simulation results graphs' provides insights on when electricity is bought and sold. It also renders a graph that shows how generated electricity was distributed (to Electric Vehicle, Hot water, Battery, Export to grid, and Household load) by calendar month.
+![Visualisation, PV distribution](./docs/VisPVDistribution.png)
+
 # Design and dependencies
 The design is logically split into two: Data population and data processing.
 
