@@ -9,6 +9,7 @@ import PySimpleGUI as sg
 import os
 
 from numpy import disp
+from dataPopulation.makedbFromSLP import guiDBFromSLP
 
 from dataProcessing.simulate import guiMain
 from dataProcessing.reportdb import display
@@ -384,8 +385,9 @@ def _getLoadProfile():
         [sg.Text('A load profile describes how electricity is used over the year. There are several ways to get a load profile. Your inverter/solar supplier may provide this information in a way that can be integrated; your electricity provider may provide smart meter data; you can guestimate your own usage. The load profile is used in the simulator to see when to draw on solar or the grid. The load profile should not include load shifting or car charging. These are covered in the what-if scenarios', size=(50,8))],
         [sg.Text('===================================================', size=(50,1))],
         [sg.Button('Load profile from AlphaESS', key='-LOAD_ALPHA-', size=(25,1)), sg.Text("Requires AlphaESS login", size=(24,1))],
-        [sg.Button('Generate profile', key='-LOAD_GENERATE-', size=(25,1)), sg.Text("Use this if you have no data", size=(24,1))],
-        [sg.Button('Load profile from Electric Ireland', key='-LOAD_EI-', size=(25,1), disabled=False), sg.Text("Requires smart meter data (login)", size=(24,1))],
+        [sg.Button('Generate profile', key='-LOAD_GENERATE-', size=(25,1)), sg.Text("Estimate your own profile", size=(24,1))],
+        [sg.Button('Load profile from Electric Ireland', key='-LOAD_EI-', size=(25,1), disabled=False), sg.Text("Requires smart meter data", size=(24,1))],
+        [sg.Button('Standard Load profile', key='-LOAD_SLP-', size=(25,1), disabled=False), sg.Text("Average usage from ESBN", size=(24,1))],
         [sg.Button('OK', key='-OK-', size=(25,1))]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
@@ -403,6 +405,8 @@ def _getLoadProfile():
             _generateLoadProfile()
         if event == '-LOAD_EI-': 
             guiDBFromEISmartMeter(CONFIG)
+        if event == '-LOAD_SLP-': 
+            guiDBFromSLP(CONFIG)
         if event == '-OK-': 
             window.close()
             break

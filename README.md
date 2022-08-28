@@ -55,7 +55,7 @@ The load shifting and car charging are found here. They both work in similar way
 
 ![Scenario editing](./docs/ScenarioEdit.png)
 
-The usage profile is used to capture how electricity load varies over the year. There are several ways to source this data. If you have an inverter, you may be able to download the data directly (AlphaESS is integrated). If you have a smart meter, you can get the data from your supplier (Electric Ireland smart meter datafile is done). If you have neither, you can generate a load profile.
+The usage profile is used to capture how electricity load varies over the year. There are several ways to source this data. If you have an inverter, you may be able to download the data directly (AlphaESS is integrated). If you have a smart meter, you can get the data from your supplier (Electric Ireland smart meter datafile is done). If you have neither, you can generate a load profile (if you have a rough idea when you use electricity) or use the "Standard Load Profile" mandated by the CRU for smart meter SST comparison sites.
 
 ![Profile options](./docs/ProfileOptions.png)
 ![Alpha ESS input](./docs/AlphaESSInput.png)
