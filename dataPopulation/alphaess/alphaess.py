@@ -68,7 +68,7 @@ class alphaess:
                          if "M" in json_response["data"]["TokenCreateTime"]:
                              self.tokencreatetime = datetime.strptime(json_response["data"]["TokenCreateTime"],"%m/%d/%Y %I:%M:%S %p")
                          else:
-                             self.tokencreatetime =  datetime.strptime(json_response["data"]["TokenCreateTime"],"%Y-%m-%d %H:%M:%S")
+                             self.tokencreatetime =  datetime.strptime(json_response["data"]["TokenCreateTime"],"%Y/%m/%d %H:%M:%S")
 
                     self.username = username
                     self.password = password
