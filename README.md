@@ -99,7 +99,7 @@ If you are feeling a little more brave, you can 'Load solar data from PV GIS'. T
 
 You will need you latitude and logditude. Google maps is you friend here. On windows, drop a pin on a nearby blank area and look in the search bar or on Android, drop a pin on a nearby blank area and the coordinates appear at the top.
 The slope refers to the roof slope -- it makes a difference. I used an angle meter on my phone.
-The azimuth refers to the direction the panels will face 0=North, 90=East, etc.
+The azimuth refers to the direction the panels will face 0=North, 90=East, 180=South. If you are west facing you need to use negative values, -90=West, etc.
 Panels ane Wp speak for themselves.
 You can add up to two strings here. If your inverter has two inputs, check 'Dedicated MPPT' so the strings are added together (as opposed to picking the best for any given 5 minute interval)
 
