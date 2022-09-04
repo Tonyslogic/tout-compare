@@ -1,3 +1,4 @@
+from copy import deepcopy
 import csv
 import hashlib
 import logging
@@ -604,11 +605,18 @@ def _saveTotals(dbFile, scenarioID, totals):
         print(e)
     return
 
-def _md5(scenario):
-    return hashlib.md5(json.dumps(scenario, sort_keys=True).encode('utf-8')).hexdigest()
+def _getActiveMD5(scenario):
+    # make active and remove scenario[Divert][HWD][KWH]
+    comparableScenario = deepcopy(scenario)
+    comparableScenario["Active"] = True
+    try: del comparableScenario["Divert"]["HWD"]["KWH"]
+    except: pass
+
+    ret = hashlib.md5(json.dumps(comparableScenario, sort_keys=True).encode('utf-8')).hexdigest()
+    return ret
 
 def _saveScenarioAndData(scenario, simulation_output, totals, dbFile):
-    scenario_md5 = _md5(scenario)
+    scenario_md5 = _getActiveMD5(scenario)
     scenarioID = _saveScenario(dbFile, scenario_md5, scenario)
     if scenarioID is not None: 
         _saveScenarioData(dbFile, scenarioID, simulation_output)
@@ -619,7 +627,7 @@ def _loadScenarioFromDB(dbFile, scenario):
     foundInDB = False
     res = []
     totals = {}
-    md5 = _md5(scenario)
+    md5 = _getActiveMD5(scenario)
     sql_data = "SELECT Date, MinuteOfDay, DayOfWeek, Feed, Buy, SOC, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV \
                 FROM scenariodata, scenarios WHERE md5 = '" + md5 + "' AND scenarios.id = scenariodata.scenarioID \
                 ORDER BY Date, MinuteOfDay ASC"
@@ -636,8 +644,8 @@ def _loadScenarioFromDB(dbFile, scenario):
             totals["totalBuy"] = tots[1]
             totals["totalEV"] = tots[2]
             totals["totalHWDiv"] = tots[3]
-            totals["totalEVDiv"] = tots[4]
-            totals["totalHWDNeed"] = tots[5]
+            totals["totalHWDNeed"] = tots[4]
+            totals["totalEVDiv"] = tots[5]
             c.execute(sql_data)
             res = c.fetchall()
             foundInDB = True

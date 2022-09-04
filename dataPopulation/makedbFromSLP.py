@@ -96,12 +96,13 @@ def _getStandardLPData():
     lpData = None
     annualUsage = 4200
     meterTypes = ["Urban", "Rural"]
+    meterType = "Urban"
 
     left_col = [
             [sg.Text('This will wipe the DB and add data from the Irish standard load profile (Nov 21). You can learn more here: https://rmdservice.com/standard-load-profiles/', size=(55,2))],
             [sg.Text('Select the meter type (Urban or Rural), and specify the annual usage in kWh. Then "Load"', size=(55,1))],
             [sg.Text('====================================================================================', size=(55,1))],
-            [sg.Text('Smart meter type', size=(24,1)), sg.Combo(meterTypes, size=(25,1), readonly=True, key="-TYPE-")],
+            [sg.Text('Smart meter type', size=(24,1)), sg.Combo(meterTypes, default_value="Urban", size=(25,1), readonly=True, key="-TYPE-")],
             [sg.Text('Annual usage (kWh)', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-USAGE-', default_text="4200")],
             [sg.Button('Load', key='-LOAD-', disabled=False, size=(15,1)), sg.Button('Close', key='-CLOSE-', size=(15,1)) ]
     ]

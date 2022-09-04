@@ -435,6 +435,7 @@ def getScenarios(config):
         scenarios = data["Scenarios"]
     except:
         scenarios = []
+    scenarios =  sorted(scenarios, key=lambda d: d['Name'])
     old_md5s = _getOldmd5s(scenarios)
     nav_window = _renderScenarioNav(scenarios)
     while True:
@@ -453,6 +454,7 @@ def getScenarios(config):
             index = int(event[-2])
             del scenarios[index]
             _deleteScenarioFromDB(old_md5s[index])
+            scenarios =  sorted(scenarios, key=lambda d: d['Name'])
             old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
@@ -461,6 +463,7 @@ def getScenarios(config):
             thecopy = copy.deepcopy(scenarios[scenarioIndex])
             thecopy["Name"] += "(copy)"
             scenarios.append(thecopy)
+            scenarios =  sorted(scenarios, key=lambda d: d['Name'])
             old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
@@ -472,6 +475,7 @@ def getScenarios(config):
                 "Discharge stop": 19.6,
                 "LoadShift": [],
                 "CarCharge": []})
+            scenarios =  sorted(scenarios, key=lambda d: d['Name'])
             old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
