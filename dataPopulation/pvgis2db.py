@@ -1,4 +1,5 @@
 import asyncio
+import decimal
 import logging
 import json
 import os
@@ -129,10 +130,15 @@ def _getPanelsGUI():
             panels["Location"] = {"Latitude": values['-LAT-'], "Longitude": values['-LON-']}
             panels["DedicatedMPPTs"] = values['-DEDICATED-']
             panels["Strings"] = []
-            panels["Strings"].append({"Slope": float(values['-SLOPE1-']), "Azimuth": float(values['-AZI1-']), "Panels": int(values['-PAN1-']), "Wp": float(values['-WP1-'])})
+            decimal.getcontext().prec = 3
+            az1 = decimal.Decimal(values['-AZI1-'])
+            if az1 > 180: az1 = 360 - az1
+            panels["Strings"].append({"Slope": float(values['-SLOPE1-']), "Azimuth": str(az1), "Panels": int(values['-PAN1-']), "Wp": float(values['-WP1-'])})
             if values["-2NDSTRING-"]:
-                panels["Strings"].append({"Slope": float(values['-SLOPE2-']), "Azimuth": float(values['-AZI2-']), "Panels": int(values['-PAN2-']), "Wp": float(values['-WP2-'])})
-            print (panels)
+                az2 = decimal.Decimal(values['-AZI2-'])
+                if az2 > 180: az2 = 360 -az2
+                panels["Strings"].append({"Slope": float(values['-SLOPE2-']), "Azimuth": str(az2), "Panels": int(values['-PAN2-']), "Wp": float(values['-WP2-'])})
+            # print (panels)
             nav_window.close()
             break
 
@@ -147,7 +153,6 @@ def guiPVgis(config):
 async def _getDataFromPVGIS(slope, azimuth, latitude, longitude):
     ret = {}
     url = URL.substitute({'LAT': latitude, 'LON': longitude, 'SLOPE': slope, 'AZIMUTH': azimuth})
-    # print (url)
     async with aiohttp.ClientSession() as session:
             response = await session.get(url)
 
@@ -156,7 +161,8 @@ async def _getDataFromPVGIS(slope, azimuth, latitude, longitude):
             except:
                 pass
             if response.status != 200:
-              return None
+                print(response)
+                return None
 
             json_response = await response.json()
 
@@ -194,6 +200,7 @@ if __name__ == "__main__":
     panels["Location"] = {"Latitude": 53.626, "Longitude": -8.171}
     panels["DedicatedMPPTs"] = True
     panels["Strings"] = []
-    panels["Strings"].append({"Slope": 24, "Azimuth": 136, "Panels": 14, "Wp": 325})
+    panels["Strings"].append({"Slope": 24, "Azimuth": 136, "Panels": 13, "Wp": 325})
+    panels["Strings"].append({"Slope": 24, "Azimuth": 226, "Panels": 13, "Wp": 325})
     # main(panels)
     guiPVgis(CONFIG)
