@@ -43,7 +43,7 @@ def _loadImportFile(importFile):
         except: rate["LastUpdate"] = datetime.datetime.today().strftime('%Y-%m-%d')
     return data
 
-def  _updateRates(rates):
+def  _updateRates(CONFIG, rates):
     r_file = os.path.join(CONFIG, "rates.json")
     if not os.path.isfile(r_file): Path(r_file).touch()
     for rate in rates:
@@ -405,7 +405,7 @@ def getRates(config):
             nav_window.close()
             nav_window = _renderRatePlanNav(rates)
         if event == '-SAVE_RATE_PLAN-': 
-            _updateRates(rates)
+            _updateRates(CONFIG, rates)
             # print(rates)
             break
 

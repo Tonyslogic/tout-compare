@@ -42,7 +42,7 @@ def _saveDemoConfig():
     # SystemProperties.json
     _updateSysConfig(DEMO_SYSTEM)
     # rates.json
-    _updateRates(DEMO_RATES)
+    _updateRates(CONFIG, DEMO_RATES)
     # loadProfile.json
     profile = {}
     profile["AnnualUsage"] = DEMO_ANNUAL
@@ -50,7 +50,7 @@ def _saveDemoConfig():
     profile["MonthlyDistribution"] = DEMO_MONTHLYDIST
     profile["DayOfWeekDistribution"] = DEMO_DOWDIST
     profile["HourlyDistribution"] = DEMO_HOURLYDIST
-    _saveProfile(profile)
+    _saveProfile(CONFIG, profile)
     # populateDB 
     _guiDBFromProfile(CONFIG, DEMO_START)
     # solar 
@@ -501,7 +501,7 @@ def _callSimulate():
                     save = value
             sysProps["Scenarios"] = scenarios
             _updateSysConfig(sysProps)
-            _updateRates(rates)
+            _updateRates(CONFIG, rates)
             window.close()
             guiMain(CONFIG, begin, end, save)
             break

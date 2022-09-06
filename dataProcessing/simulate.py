@@ -150,11 +150,16 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
             inputTemp = max (DIVERT["HWD"]["intake"], inputTemp - 0.333333333333333)
             # Reduce the temp to cater for usage: 70%@08:00 10%@14:00 20%@20:00
             hour = minuteOfDay // 60
-            match hour:
-                case 8: usage = usage * 0.7
-                case 14: usage = usage * 0.1
-                case 20: usage = usage * 0.2
-                case _: usage = 0
+            # pydroid has an older version of python
+            # match hour:
+            #     case 8: usage = usage * 0.7
+            #     case 14: usage = usage * 0.1
+            #     case 20: usage = usage * 0.2
+            #     case _: usage = 0
+            if hour == 8: usage = usage * 0.7
+            elif hour == 14: usage = usage * 0.1
+            elif hour == 20: usage = usage * 0.2
+            else: usage = 0
         inputTemp = ((tank - usage) * inputTemp + usage * DIVERT["HWD"]["intake"]) / tank
         inputTemp = max (DIVERT["HWD"]["intake"], inputTemp)
 

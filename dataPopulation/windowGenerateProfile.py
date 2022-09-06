@@ -145,7 +145,7 @@ def _renderLoadGeneration(profile):
     window = sg.Window('Load generation input', layout,resizable=True)
     return window
 
-def _saveProfile(profile):
+def _saveProfile(CONFIG, profile):
     # print (profile)
     with open(os.path.join(CONFIG, "loadProfile.json"), 'w') as f:
         json.dump(profile, f)
@@ -202,7 +202,7 @@ def genProfile(config):
             if md and dwd and hdd:
                 window['-GEN_LOAD-'].update(disabled=False)
         if event == '-GEN_LOAD-':
-            _saveProfile(profile) 
+            _saveProfile(CONFIG, profile) 
             # print (start)
             _guiDBFromProfile(CONFIG, start)
             # _setStatus()
