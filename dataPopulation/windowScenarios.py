@@ -382,7 +382,7 @@ def _renderScenarioNav(scenarios):
     left_col.append([])
     left_col.append([sg.Text('===================================================', size=(50,1))])
     left_col.append([sg.Button('Add a new scenario', size=(24,1), key='-ADD_SCENARIO-'), sg.In(size=(24,1), enable_events=True ,key='-NEW_SCENARIO_NAME-', default_text="<New scenario name>")])
-    left_col.append([sg.Button('Save scenarios', size=(24,1), key='-SAVE_SCENARIOS-', disabled=saveDisabled)])
+    left_col.append([sg.Button('Save scenarios', size=(24,1), key='-SAVE_SCENARIOS-', disabled=saveDisabled), sg.Button('Clear DB cache', size=(24,1), key='-CLEAN_DB-')])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Scenario navigation', layout,resizable=True)
     return window
@@ -396,6 +396,26 @@ def _getActiveMD5(scenario):
     ret = hashlib.md5(json.dumps(scenario, sort_keys=True).encode('utf-8')).hexdigest()
     scenario["Active"] = active
     return ret
+
+def _cleanDB():
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
+        env = json.load(f)
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
+    d1 = "DROP TABLE scenarios"
+    d2 = "DROP TABLE scenariodata"
+    d3 = "DROP TABLE scenarioTotals"
+    conn = None
+    try:
+        conn = sqlite3.connect(dbFile)
+        c = conn.cursor()
+        c.execute(d1)
+        c.execute(d2)
+        c.execute(d3)
+        conn.commit()
+        conn.close()
+    except Error as e:
+        print(e)
+    return
 
 def _deleteScenarioFromDB(md5):
     with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
@@ -479,6 +499,8 @@ def getScenarios(config):
             old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
+        if event == '-CLEAN_DB-': 
+            _cleanDB()
         if event == '-SAVE_SCENARIOS-': 
             data["Scenarios"] = scenarios
             _updateSysConfig(data)

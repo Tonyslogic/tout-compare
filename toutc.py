@@ -521,7 +521,7 @@ def _mainWin():
             [sg.Button('Exit', key='-EXIT-', size=(25,1))]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
-    MAIN_WINDOW = sg.Window('Electricity Time of Use Comparison', layout,resizable=True)
+    MAIN_WINDOW = sg.Window('Electricity Time of Use Comparison (v0.0.19)', layout,resizable=True)
     MAIN_WINDOW.finalize()
 
     _setStatus()

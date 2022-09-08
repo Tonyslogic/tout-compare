@@ -66,6 +66,9 @@ Generating a profile requires some basic annual and base load data
 
 It also requires how that load is distributed by calendar month, day of week, and hour of day. The three screens are very similar. Use the sliders to specify relative usage -- accuracy is not critical. The basic idea is to capture seasonal, weekly and daily patterns (we are creatures of habit). This is used to generate the 5 minute interval data required by the simulator. It works surprisingly well. Note all three distributions are required (must be saved) before generating data is enabled.
 
+Once you have created a profile by hand, its a good idea to back it up somewhere. To do this simply copy the 'loadProfile.json' file from the configuration folder to someplace safe.
+To use it again, just copy it back into the configuration folder (or a new one). When you select 'Generate profile, the sliders will be set as they were when you last 'Generated'.
+
 ![Monthly distribution](./docs/ProfileWizard2.png)
 
 At this point the database contains load data (or if you used the AplhaESS integration, load and PV data). The main window will have been updated to reflect the status as you progress.
@@ -88,6 +91,7 @@ There are a couple of things to note when editing the rates:
 
 ![Day profile edit](./docs/RateDateProfile.png)
 
+Creating rates is tedious. It is recommended to save a backup of the 'rates.json' from the configuration folder to a safe place. As with the load profile using it later is as simple as copying it into the new configuration folder. Alternatively, you can add the content of a rates.json using the import button.
 
 Once saved, the simulation option is available. Before going there you can also add some default PV generation. To do this, use the 'Solar data' button. Right now there are two options. Loading the default will load the same solar data that is in the demo data. It automatically aligns day by day with the load profile data.
 
