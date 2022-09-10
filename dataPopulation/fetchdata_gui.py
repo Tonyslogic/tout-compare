@@ -5,6 +5,7 @@ import os
 import sys
 import datetime
 import json
+import threading
 
 
 from dataPopulation.alphaess.alphaess import alphaess
@@ -15,6 +16,8 @@ USERNAME = "" # input("username: ")
 PASSWORD = "" # input("password: ")
 START = "" # input("start date (YYYY-MM-DD): ")
 FINISH = "" # input("finish date (YYYY-MM-DD): ")
+FETCH_START = ""
+async_loop = None
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -46,50 +49,22 @@ def _loadExistingData(storageFolder):
     return ret, last
 
 def guiFetch(user, passwd, start, end, config): 
-    global USERNAME, PASSWORD, START, FINISH, CONFIG
+    global USERNAME, PASSWORD, START, FINISH, CONFIG, async_loop
     USERNAME = user
     PASSWORD = passwd
     START = start
     FINISH = end
     CONFIG = config
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(main())
-
-
-async def main():
-    global START
-    global CONFIG
-    
-    # try:
-    #     CONFIG = sys.argv[1]
-    # except:
-    #     pass
-    # print(CONFIG)
-    
-    useOldData = False
-    
-    env = {}
     with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
     storageFolder = env["StorageFolder"]
-    
-    old_data, latest = _loadExistingData(storageFolder)
-    try:
-        fin = datetime.datetime.strptime(FINISH, '%Y-%m-%d')
-        bgn = datetime.datetime.strptime(START, '%Y-%m-%d')
-        fnd = datetime.datetime.strptime(latest, '%Y-%m-%d')
-        if fnd < fin:
-            dt = fnd + datetime.timedelta(days=1)
-            START = datetime.datetime.strftime(dt, '%Y-%m-%d')
-            useOldData = True
-            print ("Updating start to " + START)
-        if fnd > fin:
-            print ("already have data to " + latest + ". Exiting")
-            return
-    except:
-        pass
-    # sys.exit(0)
+    useOldData, oldData, getNewData = _prepare(storageFolder)
+    if getNewData == True: 
+        print("Getting new data")
+        asyncio.get_event_loop().run_until_complete(_fetch(useOldData, oldData, storageFolder))
+    else: print ("Not fetching new data")
 
+async def _fetch(useOldData, old_data, storageFolder):
     logger.debug("instantiating Alpha ESS Client")
 
     client: alphaess = alphaess()
@@ -98,7 +73,7 @@ async def main():
     authenticated = await client.authenticate(USERNAME, PASSWORD)
 
     if authenticated:
-        data = await client.getdata(START, FINISH)
+        data = await client.getdata(FETCH_START, FINISH)
         count = len(data[0]["statistics"])
         logger.info(f"Got data: {count}")
         if useOldData:
@@ -108,6 +83,31 @@ async def main():
             dataToUse = data
         with open(os.path.join(storageFolder, "dailystats.json"), 'w') as f:
             json.dump(dataToUse, f)
+    return
 
-# asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-# asyncio.run(main())
+def _prepare(storageFolder):
+    global START
+    global FETCH_START
+    global CONFIG
+    
+    useOldData = True
+    getNewData = False
+    old_data = {}
+    
+    old_data, latest = _loadExistingData(storageFolder)
+    try:
+        fin = datetime.datetime.strptime(FINISH, '%Y-%m-%d')
+        bgn = datetime.datetime.strptime(START, '%Y-%m-%d')
+        fnd = datetime.datetime.strptime(latest, '%Y-%m-%d')
+        if fnd < fin:
+            dt = fnd + datetime.timedelta(days=1)
+            FETCH_START = datetime.datetime.strftime(dt, '%Y-%m-%d')
+            useOldData = True
+            getNewData = True
+            print ("Updating start to " + FETCH_START)
+        if fnd >= fin:
+            print ("already have data to " + latest + ". Exiting")
+            # return useOldData, old_data, getNewData
+    except:
+        pass
+    return useOldData, old_data, getNewData

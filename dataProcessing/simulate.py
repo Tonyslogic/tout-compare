@@ -15,6 +15,8 @@ from dateutil.relativedelta import *
 
 import PySimpleGUI as sg
 
+from dataPopulation.windowScenarios import _deleteScenarioFromDB
+
 TABLE = None
 WINDOW = None
 
@@ -520,7 +522,7 @@ def _render(report, begin, end):
                                 int(scenario["Totals"]["totalEVDiv"]) ])
     _renderSimpleGUI(chartDataII, begin, end)
 
-def _saveScenario(dbFile, md5, scenario):
+def _saveScenario(dbFile, md5, scenario, begin, end):
     ret = None
     conn = None
     try:
@@ -529,10 +531,13 @@ def _saveScenario(dbFile, md5, scenario):
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, \
                         md5 TEXT UNIQUE NOT NULL, \
                         name TEXT UNIQUE NOT NULL, \
-                        json TEXT NOT NULL);")
+                        json TEXT NOT NULL, \
+                        begin TEXT NOT NULL, \
+                        end TEXT NOT NULL);")
         conn.commit()
         c = conn.cursor()
-        c.execute('INSERT INTO scenarios (md5, name, json) VALUES(?,?,?);', (md5, scenario["Name"], json.dumps(scenario, sort_keys=True).encode('utf-8')))
+        c.execute('INSERT INTO scenarios (md5, name, json, begin, end) VALUES(?,?,?,?,?);', 
+                    (md5, scenario["Name"], json.dumps(scenario, sort_keys=True).encode('utf-8'), begin, end))
         ret = c.lastrowid
         conn.commit()
         conn.close()
@@ -620,19 +625,20 @@ def _getActiveMD5(scenario):
     ret = hashlib.md5(json.dumps(comparableScenario, sort_keys=True).encode('utf-8')).hexdigest()
     return ret
 
-def _saveScenarioAndData(scenario, simulation_output, totals, dbFile):
+def _saveScenarioAndData(scenario, simulation_output, totals, dbFile, begin, end):
     scenario_md5 = _getActiveMD5(scenario)
-    scenarioID = _saveScenario(dbFile, scenario_md5, scenario)
+    scenarioID = _saveScenario(dbFile, scenario_md5, scenario, begin, end)
     if scenarioID is not None: 
         _saveScenarioData(dbFile, scenarioID, simulation_output)
         _saveTotals(dbFile, scenarioID, totals)
     return
 
-def _loadScenarioFromDB(dbFile, scenario):
+def _loadScenarioFromDB(dbFile, scenario, begin, end):
     foundInDB = False
     res = []
     totals = {}
     md5 = _getActiveMD5(scenario)
+    sql_find = "SELECT begin, end FROM scenarios WHERE md5 = '" + md5 + "'"
     sql_data = "SELECT Date, MinuteOfDay, DayOfWeek, Feed, Buy, SOC, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV \
                 FROM scenariodata, scenarios WHERE md5 = '" + md5 + "' AND scenarios.id = scenariodata.scenarioID \
                 ORDER BY Date, MinuteOfDay ASC"
@@ -642,19 +648,24 @@ def _loadScenarioFromDB(dbFile, scenario):
     try:
         conn = sqlite3.connect(dbFile)
         c = conn.cursor()
-        c.execute(sql_total)
-        tots = c.fetchone()
-        if tots is not None: 
-            totals["totalFeed"] = tots[0]
-            totals["totalBuy"] = tots[1]
-            totals["totalEV"] = tots[2]
-            totals["totalHWDiv"] = tots[3]
-            totals["totalHWDNeed"] = tots[4]
-            totals["totalEVDiv"] = tots[5]
-            c.execute(sql_data)
-            res = c.fetchall()
-            foundInDB = True
-            print("\tLoaded " + scenario["Name"] + " from DB")
+        c.execute(sql_find)
+        beginend = c.fetchone()
+        if beginend is not None and beginend[0] == begin and beginend[1] == str(end):
+            c.execute(sql_total)
+            tots = c.fetchone()
+            if tots is not None: 
+                totals["totalFeed"] = tots[0]
+                totals["totalBuy"] = tots[1]
+                totals["totalEV"] = tots[2]
+                totals["totalHWDiv"] = tots[3]
+                totals["totalHWDNeed"] = tots[4]
+                totals["totalEVDiv"] = tots[5]
+                c.execute(sql_data)
+                res = c.fetchall()
+                foundInDB = True
+                print("\tLoaded " + scenario["Name"] + " from DB")
+        else:
+            _deleteScenarioFromDB(md5)
     except Error as e:
         # print(totals)
         print("\tScenario not found in DB: " + str(e))
@@ -684,10 +695,10 @@ def guiMain(config, begin, end, save):
         if not active: continue
         sName = _loadScenario(scenario)
         
-        foundInDB, res, totals = _loadScenarioFromDB(dbFile, scenario)
+        foundInDB, res, totals = _loadScenarioFromDB(dbFile, scenario, begin, end)
         if not foundInDB:
             res, totals = _simulate(df, start, finish)
-            if save: _saveScenarioAndData(scenario, res, totals, dbFile)   
+            if save: _saveScenarioAndData(scenario, res, totals, dbFile, begin, end)   
         
         prices = _showMeTheMoney(res, pricePlans)
         report.append({"Scenario": sName, "Totals": totals, "Plan Costs": prices})
