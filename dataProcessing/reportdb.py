@@ -182,7 +182,8 @@ def _inputDataGraphs(dbFile):
 
 def _getSavedSimName(dbFile):
     ret = []
-    sql_getNames = "SELECT name FROM scenarios"
+    dbKeys = {}
+    sql_getNames = "SELECT name, begin, end FROM scenarios"
     conn = None
     try:
         conn = sqlite3.connect(dbFile)
@@ -191,11 +192,14 @@ def _getSavedSimName(dbFile):
         res = c.fetchall()
         if res is None: ret = []
         else :
-            for r in res: ret.append(r[0])
+            for r in res: 
+                title = r[0] + ' (' + r[2] + ' months beginning ' + r[1] + ')'
+                dbKeys[title] = r[0]
+                ret.append(title)
         conn.close()
     except Error as e:
         print("Simulations not found in DB: " + str(e))
-    return ret
+    return ret, dbKeys
 
 def _buySellByDay(dbFile, sim, ax):
     conn = None
@@ -325,10 +329,10 @@ def _pvDistributionByMonth(dbFile, sim, ax):
         print(e)
     return df
 
-def _simDetails(dbFile, sim):
+def _simDetails(dbFile, sim, title):
     fig, axs = plt.subplots(nrows =2, ncols=2)
     fig.subplots_adjust(hspace=.45)
-    fig.canvas.manager.set_window_title(sim)
+    fig.canvas.manager.set_window_title(title)
     
     _buySellByHour(dbFile, sim, axs[0][0])
     _buySellByDay(dbFile, sim, axs[1][0])
@@ -349,7 +353,7 @@ def display(config):
     dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
 
     # savedSims = ["As-is", "As-is (no battery)"]
-    savedSims = _getSavedSimName(dbFile)
+    savedSims, dbKeys = _getSavedSimName(dbFile)
 
     left_col = [
             [sg.Button('Load profile & PV data graphs', key='-LOAD_PROFILE-', size=(25,1))],
@@ -371,7 +375,7 @@ def display(config):
         if event == '-LOAD_PROFILE-': _inputDataGraphs(dbFile)
         if event == '-SIM_GRAPHS-': 
             if values["-SIM-"]:
-                _simDetails(dbFile, values["-SIM-"])
+                _simDetails(dbFile, dbKeys[values["-SIM-"]], values["-SIM-"])
         if event == '-PV_DIV-': _pvDiversion(dbFile, values["-SIM-"])
         if event == '-CLOSE-': break
     nav_window.close()
