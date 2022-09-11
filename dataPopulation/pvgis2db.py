@@ -8,6 +8,8 @@ import sys
 import sqlite3
 from sqlite3 import Error
 
+import pytz, datetime
+
 import PySimpleGUI as sg 
 
 import aiohttp
@@ -29,7 +31,7 @@ def _fillDB(dbFile, rows):
     try:
         conn = sqlite3.connect(dbFile)
         cur = conn.cursor()
-        cur.executemany('INSERT INTO pvgis VALUES(?,?,?);',rows)
+        cur.executemany('REPLACE INTO pvgis VALUES(?,?,?);',rows)
         cur.execute(""" UPDATE dailystats AS f
                         SET NormalPV = t.PV
                         FROM pvgis AS t
@@ -64,13 +66,20 @@ def _createDBTable(dbFile):
     except Error as e:
         print(e)
 
-def _create_rows(strings, dedicatedMPPT):
+def _create_rows(strings, dedicatedMPPT, tz):
     ret = []
     stringCount = len(strings)
+    timezoneLocal = pytz.timezone(tz)
     
     for idx, hour in enumerate(strings[0]["data"]['outputs']['hourly']):
-        date = hour["time"][4:6] + "-" + hour["time"][6:8]
-        hr = hour["time"][9:11]
+        # "20200102:0111"
+        timeUTC = datetime.datetime.strptime(hour["time"], "%Y%m%d:%H%M")
+        timeLocal = pytz.utc.localize(timeUTC).astimezone(timezoneLocal)
+
+        # date = hour["time"][4:6] + "-" + hour["time"][6:8]
+        # hr = hour["time"][9:11]
+        date = datetime.datetime.strftime(timeLocal, "%m-%d")
+        hr = datetime.datetime.strftime(timeLocal, "%H")
         power = hour["G(i)"] / 12 # to get 5mins
         PV = (power/MGN) * strings[0]["Panels"] * strings[0]["Wp"]
         if stringCount == 2:
@@ -105,7 +114,8 @@ def _renderPanelNav():
     left_col.append([sg.Text('Wp', size=(15,1)),sg.In(size=(15,1), enable_events=True ,key='-WP1-', default_text="325"),
                     sg.Text('2nd string Wp', size=(15,1)),sg.In(size=(15,1), disabled=True, enable_events=True ,key='-WP2-', default_text="325")])
     left_col.append([sg.Text('==============================================================================', size=(80,1))])
-    left_col.append([sg.Button('Fetch & Load DB', size=(24,1), key='-FETCH_SOLAR-', disabled=False)])
+    left_col.append([sg.Button('Fetch & Load DB', size=(24,1), key='-FETCH_SOLAR-', disabled=False),
+                     sg.Text('Converting UTC to:', size=(13,1)), sg.Combo(pytz.all_timezones, size=(25,1), readonly=True, key="-TZ-", default_value='Europe/Dublin')])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Solar data retrieval', layout,resizable=True)
     return window
@@ -129,6 +139,7 @@ def _getPanelsGUI():
             panels = {}
             panels["Location"] = {"Latitude": values['-LAT-'], "Longitude": values['-LON-']}
             panels["DedicatedMPPTs"] = values['-DEDICATED-']
+            panels["TZ"] = values['-TZ-']
             panels["Strings"] = []
             decimal.getcontext().prec = 3
             az1 = decimal.Decimal(values['-AZI1-'])
@@ -183,7 +194,7 @@ def main(panels):
 
     for string in panels["Strings"]:
         string["data"] =  asyncio.get_event_loop().run_until_complete(_getDataFromPVGIS(string["Slope"], string["Azimuth"], panels["Location"]["Latitude"], panels["Location"]["Longitude"]))
-    rows = _create_rows (panels["Strings"], panels["DedicatedMPPTs"])
+    rows = _create_rows (panels["Strings"], panels["DedicatedMPPTs"], panels["TZ"])
     # print (len(rows))
 
     dbFile = os.path.join(storageFolder, dbFileName)

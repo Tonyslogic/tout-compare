@@ -25,6 +25,8 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
+VERSION = "v0.0.21"
+
 MAIN_WINDOW = None
 
 CONFIG = "C:\\dev\\solar\\"
@@ -521,7 +523,7 @@ def _mainWin():
             [sg.Button('Exit', key='-EXIT-', size=(25,1))]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
-    MAIN_WINDOW = sg.Window('Electricity Time of Use Comparison (v0.0.20)', layout,resizable=True)
+    MAIN_WINDOW = sg.Window('Electricity Time of Use Comparison (' + VERSION + ')', layout,resizable=True)
     MAIN_WINDOW.finalize()
 
     _setStatus()

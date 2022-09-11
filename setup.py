@@ -1,5 +1,6 @@
 import sys
 from cx_Freeze import setup, Executable
+from toutc import VERSION
 
 # Dependencies are automatically detected, but it might need fine tuning.
 # "packages": ["os"] is used as example only
@@ -14,7 +15,7 @@ if sys.platform == "win32":
 
 setup(
     name="tout-compare",
-    version="0.0.20",
+    version=VERSION,
     description="Compare TOUT electricity tariffs",
     options={
         "build_exe": build_exe_options
