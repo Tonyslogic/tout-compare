@@ -384,9 +384,9 @@ def _renderScenarioNav(scenarios):
         name = scenario["Name"]
         left_col.append(
             [sg.Text(name, size=(24,1)), 
-            sg.Button("Edit", size=(5,1), key='-EDIT_SCENARIO_'+ str(i) +'-'), 
-            sg.Button("Copy", size=(5,1), key='-COPY_SCENARIO_'+ str(i) +'-'),
-            sg.Button("Delete", size=(7,1), key='-DELETE_SCENARIO_'+ str(i) +'-')
+            sg.Button("Edit", size=(5,1), key='-EDIT_SCENARIO_'+ str(i)), 
+            sg.Button("Copy", size=(5,1), key='-COPY_SCENARIO_'+ str(i)),
+            sg.Button("Delete", size=(7,1), key='-DELETE_SCENARIO_'+ str(i))
             ])
     left_col.append([])
     left_col.append([sg.Text('===================================================', size=(50,1))])
@@ -471,7 +471,7 @@ def getScenarios(config):
         event, values = nav_window.Read()
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if str(event).startswith('-EDIT_SCENARIO_'):
-            scenarioIndex = int(event[-2])
+            scenarioIndex = int(event.rsplit('_', 1)[1])
             updatedScenario = _editScenario(scenarios[scenarioIndex])
             if _getActiveMD5(updatedScenario) not in old_md5s.values():
                 _deleteScenarioFromDB(old_md5s[scenarioIndex])
@@ -480,7 +480,7 @@ def getScenarios(config):
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
         if str(event).startswith('-DELETE_SCENARIO_'):
-            index = int(event[-2])
+            index = int(event.rsplit('_', 1)[1])
             del scenarios[index]
             _deleteScenarioFromDB(old_md5s[index])
             scenarios =  sorted(scenarios, key=lambda d: d['Name'])
@@ -488,7 +488,7 @@ def getScenarios(config):
             nav_window.close()
             nav_window = _renderScenarioNav(scenarios)
         if str(event).startswith('-COPY_SCENARIO_'):
-            scenarioIndex = int(event[-2])
+            scenarioIndex = int(event.rsplit('_', 1)[1])
             thecopy = copy.deepcopy(scenarios[scenarioIndex])
             thecopy["Name"] += "(copy)"
             scenarios.append(thecopy)

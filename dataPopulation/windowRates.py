@@ -7,10 +7,10 @@ from pathlib import Path
 import PySimpleGUI as sg 
 from collections import defaultdict
 
-from dataProcessing.simulate import guiMain
-from dataPopulation.fetchdata_gui import guiFetch
-from dataPopulation.makedb import guiMakeDB
-from dataPopulation.makedbFromProfile import _guiDBFromProfile
+# from dataProcessing.simulate import guiMain
+# from dataPopulation.fetchdata_gui import guiFetch
+# from dataPopulation.makedb import guiMakeDB
+# from dataPopulation.makedbFromProfile import _guiDBFromProfile
 
 MAIN_WINDOW = None
 
@@ -349,13 +349,14 @@ def _renderRatePlanNav(ratePlans):
         left_col.append([sg.Text('No supplier/plans defined, Create before saving.', size=(80,1))])
         saveDisabled = True
     for i, ratePlan in enumerate(ratePlans):
-        supplier = ratePlan["Supplier"]
-        plan = ratePlan["Plan"]
-        deleteKey = '-DELETE_RATE_PLAN_'+ str(i) +'-'
+        supplierPlan = ratePlan["Supplier"] + ", " + ratePlan["Plan"]
         left_col.append(
-            [sg.Text(supplier, size=(25,1)), sg.Button(plan, size=(24,1), key='-EDIT_RATE_PLAN_'+ str(i) +'-'), sg.Button("Delete", size=(24,1), key=deleteKey)]
+            [sg.Text(supplierPlan, size=(50,1)), 
+             sg.Button("Edit", size=(5,1), key='-EDIT_RATE_PLAN_'+ str(i)),  
+             sg.Button("Copy", size=(5,1), key='-COPY_RATE_PLAN_'+ str(i)), 
+             sg.Button("Delete", size=(7,1), key='-DELETE_RATE_PLAN_'+ str(i))]
         )
-    left_col.append([])
+    left_col.append([]) 
     left_col.append([sg.Text('==============================================================================', size=(80,1))])
     left_col.append([sg.Text("New supplier", size=(25,1)), sg.Button('Create new plan', size=(24,1), key='-ADD_RATE_PLAN-'), sg.In(size=(28,1), enable_events=True ,key='-NEW_RATE_PLAN_NAME-', default_text="<New plan name>")])
     left_col.append([sg.Text("Import rate file", size=(25,1)), sg.In(size=(28,1), enable_events=True ,key='-R_FILE-', default_text=CONFIG), sg.FileBrowse(), sg.Button('Import', size=(16,1), key='-IMPORT_RATES-')])
@@ -370,19 +371,28 @@ def getRates(config):
     global CONFIG
     CONFIG = config
     status, rates, defaultRateDate = _loadRates()
+    rates =  sorted(rates, key=lambda d: d['Supplier'])
     nav_window = _renderRatePlanNav(rates)
     while True:
         event, values = nav_window.Read()
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if str(event).startswith('-EDIT_RATE_PLAN_'):
-            ratePlanIndex = int(event[-2])
+            ratePlanIndex = int(event.rsplit('_', 1)[1])
             updatedRatePlan = _editRatePlan(rates[ratePlanIndex], defaultRateDate)
             rates[ratePlanIndex] = updatedRatePlan
             nav_window.close()
             nav_window = _renderRatePlanNav(rates)
         if str(event).startswith('-DELETE_RATE_PLAN_'):
-            index = int(event[-2])
+            index = int(event.rsplit('_', 1)[1])
             del rates[index]
+            nav_window.close()
+            nav_window = _renderRatePlanNav(rates)
+        if str(event).startswith('-COPY_RATE_PLAN_'):
+            index = int(event.rsplit('_', 1)[1])
+            thecopy = copy.deepcopy(rates[index])
+            thecopy["Plan"] += "(copy)"
+            rates.append(thecopy)
+            rates =  sorted(rates, key=lambda d: d['Supplier'])
             nav_window.close()
             nav_window = _renderRatePlanNav(rates)
         if event == '-ADD_RATE_PLAN-': 
@@ -397,6 +407,7 @@ def getRates(config):
                 "Active": True,
                 "LastUpdate": datetime.datetime.today().strftime('%Y-%m-%d')
                 })
+            rates =  sorted(rates, key=lambda d: d['Supplier'])
             nav_window.close()
             nav_window = _renderRatePlanNav(rates)
         if event == '-IMPORT_RATES-': 
