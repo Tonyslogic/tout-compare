@@ -25,7 +25,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "v0.0.21"
+VERSION = "v0.0.22"
 
 MAIN_WINDOW = None
 
@@ -481,7 +481,7 @@ def _callSimulate():
     left_col.append([sg.Text('===============================================================================================================', size=(100,1))])
     left_col.append([sg.Button('Simulate & Compare', key='-SIM_OK-')])
     # layout = [[sg.Column(left_col, element_justification='l')]]  
-    layout = [[sg.Column(left_col, element_justification='l', size=(800, 500), expand_y=True, scrollable=True,  vertical_scroll_only=True)]]  
+    layout = [[sg.Column(left_col, element_justification='l', size=(800, 500), expand_x=True, expand_y=True, scrollable=True,  vertical_scroll_only=True)]]  
     window = sg.Window('Simulation and comparison parameters', layout,resizable=True)
 
     while True:

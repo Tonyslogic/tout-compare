@@ -159,7 +159,7 @@ def _renderOneRatePlan(ratePlan, defaultRatePlan):
     
     left_col.append([sg.Button('Add another day profile', key='-ADD_DAY_RATE-', size=(30,1))])
     left_col.append([sg.Button('Update and close', key='-UPDATE_RATE_PLAN-', size=(30,1), disabled=updateDisabled), sg.Text(saveStatus, key='-UPDATE_RATE_PLAN_STATUS-', size=(30,1))])
-    layout = [[sg.Column(left_col, element_justification='l', size=(700, 700), expand_y=True, scrollable=True,  vertical_scroll_only=True)]]    
+    layout = [[sg.Column(left_col, element_justification='l', size=(700, 700), expand_x=True, expand_y=True, scrollable=True,  vertical_scroll_only=True)]]    
     window = sg.Window('Rate plan editor', layout,resizable=True)
         
     return window
@@ -363,7 +363,7 @@ def _renderRatePlanNav(ratePlans):
     left_col.append([sg.Text('==============================================================================', size=(80,1))])
     left_col.append([sg.Button('Save', size=(24,1), key='-SAVE_RATE_PLAN-', disabled=saveDisabled)])
     # layout = [[sg.Column(left_col, element_justification='l')]]    
-    layout = [[sg.Column(left_col, element_justification='l', size=(650, 500), expand_y=True, scrollable=True,  vertical_scroll_only=True)]]  
+    layout = [[sg.Column(left_col, element_justification='l', size=(650, 500), expand_x=True, expand_y=True, scrollable=True,  vertical_scroll_only=True)]]  
     window = sg.Window('Rates navigation', layout,resizable=True)
     return window
 
