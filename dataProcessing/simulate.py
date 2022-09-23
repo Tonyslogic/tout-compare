@@ -665,7 +665,7 @@ def _loadScenarioFromDB(dbFile, scenario, begin, end):
                 foundInDB = True
                 print("\tLoaded " + scenario["Name"] + " from DB")
         else:
-            _deleteScenarioFromDB(md5)
+            _deleteScenarioFromDB(CONFIG, md5)
     except Error as e:
         # print(totals)
         print("\tScenario not found in DB: " + str(e))

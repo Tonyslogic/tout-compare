@@ -426,7 +426,7 @@ def _cleanDB():
         print(e)
     return
 
-def _deleteScenarioFromDB(md5):
+def _deleteScenarioFromDB(CONFIG, md5):
     with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
     dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
@@ -474,7 +474,7 @@ def getScenarios(config):
             scenarioIndex = int(event.rsplit('_', 1)[1])
             updatedScenario = _editScenario(scenarios[scenarioIndex])
             if _getActiveMD5(updatedScenario) not in old_md5s.values():
-                _deleteScenarioFromDB(old_md5s[scenarioIndex])
+                _deleteScenarioFromDB(CONFIG, old_md5s[scenarioIndex])
             scenarios[scenarioIndex] = updatedScenario
             old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
@@ -482,7 +482,7 @@ def getScenarios(config):
         if str(event).startswith('-DELETE_SCENARIO_'):
             index = int(event.rsplit('_', 1)[1])
             del scenarios[index]
-            _deleteScenarioFromDB(old_md5s[index])
+            _deleteScenarioFromDB(CONFIG, old_md5s[index])
             scenarios =  sorted(scenarios, key=lambda d: d['Name'])
             old_md5s = _getOldmd5s(scenarios)
             nav_window.close()
