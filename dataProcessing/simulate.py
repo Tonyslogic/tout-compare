@@ -379,7 +379,7 @@ def _getCosts(usage, rateLookup, feedInRate):
 
     return buy, sell
 
-def _showMeTheMoney(usage, pricePlans):
+def _showMeTheMoney(usage, pricePlans, deemed, start, finish):
     ret = []
     for plan in pricePlans:
         active = True
@@ -396,7 +396,12 @@ def _showMeTheMoney(usage, pricePlans):
         feedInRate = plan["Feed"]
         buy, sell = _getCosts(usage, rateLookup, feedInRate)
         cost["Buy"] = buy / 100
-        cost["Sell"] = sell / 100
+        if deemed:
+            fit_value = _getDeemedExportValue(start, finish, feedInRate)
+            cost["Sell"] = fit_value
+            sell = fit_value * 100
+        else: 
+            cost["Sell"] = sell / 100
         cost["Fixed"] = plan["Standing charges"]
         cost["Carrot"] = plan["Bonus cash"]
         cost["Total"] = ((buy - sell) / 100) - cost["Carrot"] + cost["Fixed"]
@@ -497,9 +502,10 @@ def _renderSimpleGUI(chartData, begin, end):
             STORAGE = os.path.join(env["StorageFolder"])
             myFormats = [('Comma separated values','*.csv')]
             filename = sg.filedialog.asksaveasfilename(filetypes=myFormats, initialdir=STORAGE, defaultextension="*.csv", initialfile=title)
-            with open(filename, "w", newline="\n") as f:
-                writer = csv.writer(f)
-                writer.writerows(chartData)
+            if filename is not None and len(filename) > 1:
+                with open(filename, "w", newline="\n") as f:
+                    writer = csv.writer(f)
+                    writer.writerows(chartData)
         elif event == '-CLOSEREPORT-':
             WINDOW.close()
             break
@@ -671,7 +677,13 @@ def _loadScenarioFromDB(dbFile, scenario, begin, end):
         print("\tScenario not found in DB: " + str(e))
     return foundInDB, res, totals
 
-def guiMain(config, begin, end, save):
+def _getDeemedExportValue(start, finish, fit):
+    days = (finish - start).days
+    fitTotal =  MAX_INVERTER_LOAD * 12 * 0.8148 * days * fit / 100
+    print ("Days " + str(days) + " :: " + str(fitTotal))
+    return fitTotal
+
+def guiMain(config, begin, end, save, deemed):
     global CONFIG
     CONFIG = config
     start = datetime.datetime.strptime(begin, '%Y-%m-%d')
@@ -700,7 +712,7 @@ def guiMain(config, begin, end, save):
             res, totals = _simulate(df, start, finish)
             if save: _saveScenarioAndData(scenario, res, totals, dbFile, begin, end)   
         
-        prices = _showMeTheMoney(res, pricePlans)
+        prices = _showMeTheMoney(res, pricePlans, deemed, start, finish)
         report.append({"Scenario": sName, "Totals": totals, "Plan Costs": prices})
     
     _render(report, begin, end)

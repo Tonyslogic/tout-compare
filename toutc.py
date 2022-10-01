@@ -25,7 +25,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "v0.0.23"
+VERSION = "v0.0.24"
 
 MAIN_WINDOW = None
 
@@ -97,6 +97,8 @@ def _getConfig():
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if event == '-C_FOLDER-': 
             cfolder = values['-C_FOLDER-']
+            sfolder = cfolder
+            window['-S_FOLDER-'].update(value=cfolder)
             if os.path.isdir(cfolder) and os.path.isdir(sfolder):
                 window['-CONFIG_OK-'].update(disabled=False) 
         if event == '-S_FOLDER-': 
@@ -443,7 +445,8 @@ def _callSimulate():
                 sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, key='-CAL1-', format=('%Y-%m-%d'))],
             [sg.Text('Number of months to simulate', size=(24,1)), 
                 sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12"),
-                sg.Checkbox("Save sim data", size=(24,1), default=True, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-')],
+                sg.Checkbox("Save sim data", size=(15,1), default=True, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-'),
+                sg.Checkbox("Use deemed export", size=(15,1), default=False, disabled=False, enable_events=True, key='-DEEMED_EXPORT-')],
             [sg.Text('=================================================================================================================', size=(100,1))],
             [sg.Text('Tariff rates to compare:', size=(50,1)), sg.Text('Scenarios to simulate:', size=(50,1))]
     ]
@@ -492,6 +495,7 @@ def _callSimulate():
         if event == '-SIM_OK-': 
             # print(values)
             save = False
+            deemed = False
             for key, value in values.items():
                 if str(key).startswith('-RATE-'):
                     rateIndex = int(key[-1])
@@ -501,11 +505,13 @@ def _callSimulate():
                     scenarios[scenarioIndex]["Active"] = value
                 if str(key) == '-SAVE_SIM_OUTPUT-':
                     save = value
+                if str(key) == '-DEEMED_EXPORT-':
+                    deemed = value
             sysProps["Scenarios"] = scenarios
             _updateSysConfig(sysProps)
             _updateRates(CONFIG, rates)
             window.close()
-            guiMain(CONFIG, begin, end, save)
+            guiMain(CONFIG, begin, end, save, deemed)
             break
 
 
