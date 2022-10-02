@@ -16,6 +16,7 @@ from dateutil.relativedelta import *
 import PySimpleGUI as sg
 
 from dataPopulation.windowScenarios import _deleteScenarioFromDB
+from dataProcessing.reportdb import _getSavedSimName, _simDetails
 
 TABLE = None
 WINDOW = None
@@ -59,6 +60,8 @@ def _processOneRow(soc, load, pv, cfg):
     batAvailable = min(MAX_DISCHARGE_KWH, max(0, (soc - BATTERY_MINIMUM_KWH)))
     batChargeAvailable = min(BATTERY_SIZE_KWH - soc, _getMaxChargeForSOC(soc))
 
+    # print ([soc, batAvailable, batChargeAvailable])
+
     if not cfg: available = pv + batAvailable
     else: available = pv
 
@@ -90,7 +93,7 @@ def _processOneRow(soc, load, pv, cfg):
                     # soc was already calculated
                     # but the feed does not consider this
                     feed = min(pv - load, MAX_INVERTER_LOAD)
-                feed = feed * FEED_MODIFIER
+                feed = max(0, feed * FEED_MODIFIER)
 
     return newSOC, feed, buy, pvToCharge, pvToLoad, batToLoad
 
@@ -201,7 +204,7 @@ def _simulate(df, start, finish):
     totals = {"totalFeed": 0, "totalBuy": 0, "totalEV": 0, "totalHWDiv": 0, "totalHWDNeed": 0, "totalEVDiv": 0}
     dailyDiversionTotals = {}
     newSOC = STATE_OF_CHARGE_KWH
-    
+
     for r in list(zip(df['NormalLoad'], df['NormalPV'], df['Date'], df['MinuteOfDay'], df['DayOfWeek'])):
         if start <= datetime.datetime.strptime(r[2], '%Y-%m-%d') <= finish:
             cfg, cfgload, newSOC = _getCFG(r[2], r[3], newSOC) # Ignores using solar first if there is spare capacity, so processOneRow does this
@@ -320,7 +323,13 @@ def _setLoadShift(cfg_c):
         for m in config["months"]:
             LOAD_SHIFT[m] = (begin * 60, end * 60, stopAt * BATTERY_SIZE_KWH / 100)
 
+def _updateChargeModel(configLocation):
+    with open(os.path.join(configLocation, "SystemProperties.json"), 'r') as f:
+        data = json.load(f)
+        _getChargeModel(data)
+
 def _getChargeModel(data):
+    global CHARGE_MODEL
     # Load the Charge model for the batttery
     cm = data["ChargeModel"]
     int_cm = {int(k) : v for k, v in cm.items()}
@@ -457,12 +466,19 @@ def click(event):
 def _renderSimpleGUI(chartData, begin, end):
     global TABLE
     global WINDOW
+    with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
+        env = json.load(f)
+    dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
+    savedSims, dbKeys = _getSavedSimName(dbFile)
     # sg.theme('DarkBlue')
     # sg.set_options(font='Courier 11')
     layout = [
         [sg.Table(chartData[1:], headings=chartData[0], auto_size_columns=True,
             def_col_width=20, enable_events=True, key='-TABLE-', expand_x=True, expand_y=True)],
-        [sg.Button('Close', key='-CLOSEREPORT-', size=(25,1)), sg.Button('Save CSV', key='-SAVEREPORT-', size=(25,1))]
+        [sg.Button('Close', key='-CLOSEREPORT-', size=(25,1)), 
+         sg.Button('Save CSV', key='-SAVEREPORT-', size=(25,1)),
+         sg.Button('Show results graphs for: ', key='-SIM_GRAPHS-', size=(25,1)),
+         sg.Combo(savedSims, size=(40,1), readonly=True, key="-SIM-")]
     ]
     title = 'SimulationResults (' + str(end) + ' months beginning ' + begin + ')'
     WINDOW = sg.Window(title, layout, resizable=True, finalize=True)
@@ -474,6 +490,9 @@ def _renderSimpleGUI(chartData, begin, end):
         if event == sg.WINDOW_CLOSED:
             WINDOW.close()
             break
+        elif event == '-SIM_GRAPHS-': 
+            if values["-SIM-"]:
+                _simDetails(dbFile, dbKeys[values["-SIM-"]], values["-SIM-"])
         elif event == '-TABLE-CLICK-':
             column = values[event]
             # print(f'Click on column {column}')
@@ -706,6 +725,7 @@ def guiMain(config, begin, end, save, deemed):
         except: pass
         if not active: continue
         sName = _loadScenario(scenario)
+        _updateChargeModel(configLocation)
         
         foundInDB, res, totals = _loadScenarioFromDB(dbFile, scenario, begin, end)
         if not foundInDB:
