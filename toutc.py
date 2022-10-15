@@ -9,6 +9,7 @@ import PySimpleGUI as sg
 import os
 
 from numpy import disp
+from dataPopulation.fetchSolisData import guiSolisFetch
 from dataPopulation.makedbFromSLP import guiDBFromSLP
 
 from dataProcessing.simulate import guiMain
@@ -25,7 +26,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "v0.0.25"
+VERSION = "v0.0.26"
 
 MAIN_WINDOW = None
 
@@ -349,6 +350,45 @@ def _fetchAlphaData():
     window.close()
     return
 
+def _fetchSolisData():
+    left_col = [
+             [sg.Text('Start date', size=(24,1)), 
+              sg.In(size=(25,1), enable_events=True ,key='-START-', default_text="2022-06-01"), 
+              sg.CalendarButton('Change date', size=(25,1), target='-START-', pad=None, key='-CAL_START-', format=('%Y-%m-%d'))],
+             [sg.Text('Finish date', size=(24,1)), 
+              sg.In(size=(25,1), enable_events=True ,key='-FINISH-', default_text="2022-06-01"), 
+              sg.CalendarButton('Change date', size=(25,1), target='-FINISH-', pad=None, key='-CAL_END-', format=('%Y-%m-%d'))],
+            [sg.Text('Solis cloud username', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-SOLIS_USER-', default_text="")],
+            [sg.Text('Solis cloud password', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-SOLIS_PASS-', default_text="", password_char='*')],
+            [sg.Button('Fetch data', key='-FETCH_SOLIS-'), sg.Text("This will fetch data (PV & Load) and populate the DB", size=(50,1), key='-SOLIS_FETCH_STATUS-')]
+    ]
+    layout = [[sg.Column(left_col, element_justification='l')]]    
+    window = sg.Window('Simulation parameters', layout,resizable=True)
+
+    user = ""
+    passwd = ""
+    begin = ""
+    end = ""
+
+    while True:
+        event, values = window.Read()
+        if event in (sg.WIN_CLOSED, 'Exit'): break
+        if event == '-START-': begin = values['-START-']
+        if event == '-FINISH-': end = values['-FINISH-']
+        if event == '-SOLIS_USER-': user = values['-SOLIS_USER-']
+        if event == '-SOLIS_PASS-': passwd = values['-SOLIS_PASS-']
+        if event == '-FETCH_SOLIS-': 
+            begin = values['-START-']
+            end = values['-FINISH-']
+            user = values['-SOLIS_USER-']
+            passwd = values['-SOLIS_PASS-']
+            guiSolisFetch(user, passwd, begin, end, CONFIG)
+            _setStatus()
+            break
+
+    window.close()
+    return
+
 def _generateLoadProfile():
     genProfile(CONFIG)
     _setStatus()
@@ -389,6 +429,7 @@ def _getLoadProfile():
         [sg.Text('A load profile describes how electricity is used over the year. There are several ways to get a load profile. Your inverter/solar supplier may provide this information in a way that can be integrated; your electricity provider may provide smart meter data; you can guestimate your own usage. The load profile is used in the simulator to see when to draw on solar or the grid. The load profile should not include load shifting or car charging. These are covered in the what-if scenarios', size=(50,8))],
         [sg.Text('===================================================', size=(50,1))],
         [sg.Button('Load profile from AlphaESS', key='-LOAD_ALPHA-', size=(25,1)), sg.Text("Requires AlphaESS login", size=(24,1))],
+        [sg.Button('Load profile from Solis cloud', key='-LOAD_SOLIS-', size=(25,1)), sg.Text("Requires Solis cloud login", size=(24,1))],
         [sg.Button('Generate profile', key='-LOAD_GENERATE-', size=(25,1)), sg.Text("Estimate your own profile", size=(24,1))],
         [sg.Button('Load profile from Electric Ireland', key='-LOAD_EI-', size=(25,1), disabled=False), sg.Text("Requires smart meter data", size=(24,1))],
         [sg.Button('Standard Load profile', key='-LOAD_SLP-', size=(25,1), disabled=False), sg.Text("Average usage from ESBN", size=(24,1))],
@@ -405,6 +446,8 @@ def _getLoadProfile():
         if event in (sg.WIN_CLOSED, 'Exit'): break
         if event == '-LOAD_ALPHA-': 
             _fetchAlphaData()
+        if event == '-LOAD_SOLIS-': 
+            _fetchSolisData()
         if event == '-LOAD_GENERATE-': 
             _generateLoadProfile()
         if event == '-LOAD_EI-': 
