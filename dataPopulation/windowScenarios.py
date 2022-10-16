@@ -320,12 +320,12 @@ def _renderOneScenario(scenario):
         pan = 14
         stop = 19.6
     left_col = [
-            [sg.Text('A what-if scenaio describes additional load and variations to the solar/inverter configuration. Scenarios are visible in the simulation output. Load shifting and Car charging are not mandatory.', size=(50,3))],
+            [sg.Text('A what-if scenaio describes additional load and variations to the solar/inverter configuration. Scenarios are visible in the simulation output. Load shifting and Car charging are not mandatory. The panel count is used for linear scaling from System Configuration', size=(50,4))],
             [sg.Text('===================================================', size=(50,1))],
-            [sg.Text('Name', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-SCENARIO_NAME-', default_text=scenario["Name"])],
-            [sg.Text('Battery size (KWH)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-SCENARIO_BATTERY-', default_text=bat)],
-            [sg.Text('Number of panels', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-SCENARIO_PANELS-', default_text=pan)],
-            [sg.Text('Discharge stop (%)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-DISCHARGE_STOP-', default_text=stop)],
+            [sg.Text('Name', size=(35,1)), sg.In(size=(15,1), enable_events=True ,key='-SCENARIO_NAME-', default_text=scenario["Name"])],
+            [sg.Text('Battery size (KWH)', size=(35,1)), sg.In(size=(15,1), enable_events=True ,key='-SCENARIO_BATTERY-', default_text=bat)],
+            [sg.Text('Number of panels', size=(35,1)), sg.In(size=(15,1), enable_events=True ,key='-SCENARIO_PANELS-', default_text=pan)],
+            [sg.Text('Discharge stop (%)', size=(35,1)), sg.In(size=(15,1), enable_events=True ,key='-DISCHARGE_STOP-', default_text=stop)],
             [sg.Button("Load shifting", size=(15,1), key='-EDIT_LOAD_SHIFT-'), sg.Button("Car charging", size=(15,1), key='-EDIT_CAR_CHARGING-'), sg.Button("Diverters", size=(15,1), key='-EDIT_DIVERT-')],
             [sg.Text('===================================================', size=(50,1))],
             [sg.Button('Done editing scenario', key='-UPDATE_SCENARIO-')]

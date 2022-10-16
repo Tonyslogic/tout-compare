@@ -26,7 +26,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "v0.0.26"
+VERSION = "v0.0.27"
 
 MAIN_WINDOW = None
 
@@ -161,21 +161,28 @@ def _getSysConfig():
     cm = data["ChargeModel"]
 
     left_col = [
-            [sg.Text('Battery size (KWH)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-BATTERY_SIZE-', default_text=data["Battery Size"])],
+            [sg.Text('Panel configuration, must match downloaded data (Load profile or Solar Data) as it is used for scenario scaling', size=(45,2))],
             [sg.Text('Number of panels', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-ORIGINAL_PANELS-', default_text=data["Original panels"])],
-            [sg.Text('Discharge stop (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-DISCHARGE_STOP-', default_text=data["Discharge stop"])],
-            [sg.Text('Minimum solar excess (KWH)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-MIN_EXCESS-', default_text=data["Min excess"])],
-            [sg.Text('The maximum charge rate (KWH)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-MAX_CHARGE-', default_text=data["Max charge"])],
-            [sg.Text('The maximum dsicharge rate (KWH)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-MAX_DISCHARGE-', default_text=data["Max discharge"])],
+            
+            [sg.Text('===============================================================', size=(45,1))],
+            [sg.Text('Plant configuration, tuning the (dis)charge parameters', size=(45,1))],
+            [sg.Text('Minimum solar excess (KWH) to charge', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-MIN_EXCESS-', default_text=data["Min excess"])],
+            [sg.Text('The maximum charge rate (KWH in 5 mins)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-MAX_CHARGE-', default_text=data["Max charge"])],
+            [sg.Text('The maximum dsicharge rate (KWH in 5 mins)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-MAX_DISCHARGE-', default_text=data["Max discharge"])],
             [sg.Text('The percentage of PV that is fed in (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-FIX_FEEDIN-', default_text=data["Massage FeedIn"])],
             [sg.Text('The buy massage (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-FIX_BUY-', default_text=data["Massage Buy"])],
             [sg.Text('Loss related to storage (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-DISCHARGE_LOSS-', default_text=data["(Dis)charge loss"])],
             [sg.Text('Max that the inverter can provide (KWH)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-MAX_INVERTER_LOAD-', default_text=data["Max Inverter load"])],
             
-            [sg.Text('Charge model from 0-12 (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_0_12-', default_text=cm["0"])],
-            [sg.Text('Charge model from 12-90 (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_12_90-', default_text=cm["12"])],
-            [sg.Text('Charge model from 90-100 (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_90_100-', default_text=cm["90"])],
-            [sg.Text('Charge model from 100 (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_100-', default_text=cm["100"])],
+            [sg.Text('===============================================================', size=(45,1))],
+            [sg.Text('Battery configuration, size & behaviour.', size=(45,1))],
+            [sg.Text('Battery size (KWH).', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-BATTERY_SIZE-', default_text=data["Battery Size"])],
+            [sg.Text('Discharge stop (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-DISCHARGE_STOP-', default_text=data["Discharge stop"])],
+            
+            [sg.Text('Charge rate from 0-12 SOC (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_0_12-', default_text=cm["0"])],
+            [sg.Text('Charge rate from 12-90 SOC (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_12_90-', default_text=cm["12"])],
+            [sg.Text('Charge rate from 90-100 SOC (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_90_100-', default_text=cm["90"])],
+            [sg.Text('Charge rate at 100 SOC (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_100-', default_text=cm["100"])],
             [sg.Button('Update', key='-UPDATE_SYS_CFG-')]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
@@ -320,10 +327,10 @@ def _fetchAlphaData():
               sg.CalendarButton('Change date', size=(25,1), target='-FINISH-', pad=None, key='-CAL_END-', format=('%Y-%m-%d'))],
             [sg.Text('AlphaESS username', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-ALPHA_USER-', default_text="")],
             [sg.Text('AlphaESS password', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-ALPHA_PASS-', default_text="", password_char='*')],
-            [sg.Button('Fetch data', key='-FETCH_ALPHA-'), sg.Text("This will fetch data (PV & Load) and populate the DB", size=(50,1), key='-ALPHA_FETCH_STATUS-')]
+            [sg.Button('Fetch data', key='-FETCH_ALPHA-'), sg.Text("This will fetch data (PV & Load) from cloud.alphaess.com and populate the DB", size=(60,1), key='-ALPHA_FETCH_STATUS-')]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
-    window = sg.Window('Simulation parameters', layout,resizable=True)
+    window = sg.Window('AlphaESS scraper', layout,resizable=True)
 
     user = ""
     passwd = ""
@@ -360,10 +367,10 @@ def _fetchSolisData():
               sg.CalendarButton('Change date', size=(25,1), target='-FINISH-', pad=None, key='-CAL_END-', format=('%Y-%m-%d'))],
             [sg.Text('Solis cloud username', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-SOLIS_USER-', default_text="")],
             [sg.Text('Solis cloud password', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-SOLIS_PASS-', default_text="", password_char='*')],
-            [sg.Button('Fetch data', key='-FETCH_SOLIS-'), sg.Text("This will fetch data (PV & Load) and populate the DB", size=(50,1), key='-SOLIS_FETCH_STATUS-')]
+            [sg.Button('Fetch data', key='-FETCH_SOLIS-'), sg.Text("This will fetch data (PV & Load) from m.ginlong.com and populate the DB", size=(60,1), key='-SOLIS_FETCH_STATUS-')]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
-    window = sg.Window('Simulation parameters', layout,resizable=True)
+    window = sg.Window('Solis cloud scraper', layout,resizable=True)
 
     user = ""
     passwd = ""
