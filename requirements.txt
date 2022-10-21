@@ -4,3 +4,4 @@ pandas
 matplotlib
 aiohttp
 voluptuous
+requests
