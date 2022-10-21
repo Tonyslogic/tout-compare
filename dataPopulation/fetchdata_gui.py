@@ -6,108 +6,79 @@ import sys
 import datetime
 import json
 import threading
-
+import time
 
 from dataPopulation.alphaess.alphaess import alphaess
 
 CONFIG = "C:\\dev\\solar\\"
+ASYNC_LOOP = None
 
-USERNAME = "" # input("username: ")
-PASSWORD = "" # input("password: ")
-START = "" # input("start date (YYYY-MM-DD): ")
-FINISH = "" # input("finish date (YYYY-MM-DD): ")
-FETCH_START = ""
-async_loop = None
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger('')
+logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(sys.stdout)
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s [%(filename)s.%(funcName)s:%(lineno)d] %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
 def _loadExistingData(storageFolder):
-    ret = {}
-    latest = datetime.datetime.strptime('2021-04-01', '%Y-%m-%d')
+    ret = [{"statistics": []}]
     try:
         with open(os.path.join(storageFolder, "dailystats.json"), 'r') as f:
             ret = json.load(f)
     except:
-        return None, None
-    for day in ret[0]['statistics']:
-        for entry in day:
-            theDate = entry
-            try: 
-                dt = datetime.datetime.strptime(theDate, '%Y-%m-%d')
-                # print(theDate)
-                if dt > latest: latest = dt
-            except ValueError:
-                print("looking at dodgy data" + theDate) 
-            # print 'a' if a > b else 'b' if b > a else 'tie'
-    last = datetime.datetime.strftime(latest, '%Y-%m-%d')
-    # print(last)
-    return ret, last
+        return ret, []
+    dates = []
+    for entry in ret[0]['statistics']:
+        dates.extend(entry.keys())
+    sorteddates=sorted(dates, key=lambda x:x)
+    return ret, sorteddates
 
 def guiFetch(user, passwd, start, end, config): 
-    global USERNAME, PASSWORD, START, FINISH, CONFIG, async_loop
-    USERNAME = user
-    PASSWORD = passwd
-    START = start
-    FINISH = end
+    global CONFIG, ASYNC_LOOP
     CONFIG = config
     with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
         env = json.load(f)
     storageFolder = env["StorageFolder"]
-    useOldData, oldData, getNewData = _prepare(storageFolder)
-    if getNewData == True: 
-        print("Getting new data")
-        asyncio.get_event_loop().run_until_complete(_fetch(useOldData, oldData, storageFolder))
-    else: print ("Not fetching new data")
+    old_data, cachedDates = _loadExistingData(storageFolder)
+    try:
+        finish = datetime.datetime.strptime(end, '%Y-%m-%d')
+        begin = datetime.datetime.strptime(start, '%Y-%m-%d')
+        stats, units = asyncio.get_event_loop().run_until_complete( _fetch(user, passwd, begin, finish, cachedDates) )
+        if "sys_sn" not in old_data[0]:
+            print ("Missing meta-data")
+            del units[0]['statistics']
+            old_data[0].update(units[0])
+            print (old_data[0])
+        old_data[0]['statistics'].extend(stats)
+        with open(os.path.join(storageFolder, "dailystats.json"), 'w') as f:
+            json.dump(old_data, f)
+    except Exception as e:
+        print('%s : %s' % (type(e).__name__, str(e)))
 
-async def _fetch(useOldData, old_data, storageFolder):
-    logger.debug("instantiating Alpha ESS Client")
+async def _fetch(user, passwd, start, end, cachedDates):
+    stats = []
+    units = []
+    print("instantiating Alpha ESS Client")
 
     client: alphaess = alphaess()
 
-    logger.debug("Checking authentication")
-    authenticated = await client.authenticate(USERNAME, PASSWORD)
+    print("Checking authentication")
+    authenticated = await client.authenticate(user, passwd)
 
     if authenticated:
-        data = await client.getdata(FETCH_START, FINISH)
-        count = len(data[0]["statistics"])
-        logger.info(f"Got data: {count}")
-        if useOldData:
-            dataToUse = old_data
-            dataToUse[0]["statistics"].extend(data[0]["statistics"])
-        else:
-            dataToUse = data
-        with open(os.path.join(storageFolder, "dailystats.json"), 'w') as f:
-            json.dump(dataToUse, f)
-    return
-
-def _prepare(storageFolder):
-    global START
-    global FETCH_START
-    global CONFIG
-    
-    useOldData = True
-    getNewData = False
-    old_data = {}
-    
-    old_data, latest = _loadExistingData(storageFolder)
-    try:
-        fin = datetime.datetime.strptime(FINISH, '%Y-%m-%d')
-        bgn = datetime.datetime.strptime(START, '%Y-%m-%d')
-        fnd = datetime.datetime.strptime(latest, '%Y-%m-%d')
-        if fnd < fin:
-            dt = fnd + datetime.timedelta(days=1)
-            FETCH_START = datetime.datetime.strftime(dt, '%Y-%m-%d')
-            useOldData = True
-            getNewData = True
-            print ("Updating start to " + FETCH_START)
-        if fnd >= fin:
-            print ("already have data to " + latest + ". Exiting")
-            # return useOldData, old_data, getNewData
-    except:
-        pass
-    return useOldData, old_data, getNewData
+        print ("Authenticated")
+        delta = datetime.timedelta(days=1)
+        workingDay = start
+        while workingDay <= end:
+            if workingDay.strftime("%Y-%m-%d") not in cachedDates:
+                print ("Fetching data for " + workingDay.strftime("%Y-%m-%d"))
+                data, units = await client.getOneDayStatsData(workingDay.strftime("%Y-%m-%d"))
+                if data:
+                    for entry in data:
+                        for key, value in entry.items():
+                            stats.append({key :value['statistics']})
+                time.sleep(0.7)
+            else:  
+                print ("Already had data for " + workingDay.strftime("%Y-%m-%d") + ", skipping" )
+            workingDay += delta
+    return stats, units
