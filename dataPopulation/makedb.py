@@ -99,7 +99,7 @@ def _create_rows(data):
                         ]
                 ret.append(row)
         del ret[-1]
-    logger.info(f"Counted {len(ret)} rows")
+    logger.debug(f"Counted {len(ret)} rows")
     return ret, summaries
 
 def guiMakeDB(config):
@@ -117,7 +117,7 @@ def main():
 
     with open(os.path.join(storageFolder, "dailystats.json"), 'r') as f:
         data = json.load(f)
-    logger.info(f"The number of days:: {len(data[0]['statistics'])}")
+    logger.debug(f"The number of days:: {len(data[0]['statistics'])}")
     rows, sums = _create_rows (data[0]['statistics'])
 
     dbFile = os.path.join(storageFolder, dbFileName)

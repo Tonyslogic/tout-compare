@@ -2,11 +2,14 @@ import logging
 import asyncio
 from os import stat
 import os
+import random
 import sys
 import datetime
 import json
 import threading
 import time
+
+import PySimpleGUI as sg 
 
 from dataPopulation.alphaess.alphaess import alphaess
 
@@ -48,37 +51,41 @@ def guiFetch(user, passwd, start, end, config):
             print ("Missing meta-data")
             del units[0]['statistics']
             old_data[0].update(units[0])
-            print (old_data[0])
+            # print (old_data[0])
         old_data[0]['statistics'].extend(stats)
         with open(os.path.join(storageFolder, "dailystats.json"), 'w') as f:
             json.dump(old_data, f)
+        sg.Print("Fetched data has been cached in file: " + storageFolder + "/dailystats.json")
+        sg.Print("'Quit' will close the window without exiting the programme")
     except Exception as e:
-        print('%s : %s' % (type(e).__name__, str(e)))
+        sg.Print('%s : %s' % (type(e).__name__, str(e)))
 
 async def _fetch(user, passwd, start, end, cachedDates):
     stats = []
     units = []
-    print("instantiating Alpha ESS Client")
+    sg.Print("instantiating Alpha ESS Client")
 
     client: alphaess = alphaess()
 
-    print("Checking authentication")
+    sg.Print("Checking authentication")
     authenticated = await client.authenticate(user, passwd)
 
     if authenticated:
-        print ("Authenticated")
+        sg.Print ("Authenticated")
         delta = datetime.timedelta(days=1)
         workingDay = start
         while workingDay <= end:
             if workingDay.strftime("%Y-%m-%d") not in cachedDates:
-                print ("Fetching data for " + workingDay.strftime("%Y-%m-%d"))
+                sg.Print ("Fetching data for " + workingDay.strftime("%Y-%m-%d"))
                 data, units = await client.getOneDayStatsData(workingDay.strftime("%Y-%m-%d"))
                 if data:
                     for entry in data:
                         for key, value in entry.items():
                             stats.append({key :value['statistics']})
-                time.sleep(0.7)
+                throttle = 0.7 + random.uniform(0.0, 0.5)
+                sg.Print("Throttling (" + str(throttle) + " seconds)...")
+                time.sleep(throttle)
             else:  
-                print ("Already had data for " + workingDay.strftime("%Y-%m-%d") + ", skipping" )
+                sg.Print ("Already had data for " + workingDay.strftime("%Y-%m-%d") + ", skipping" )
             workingDay += delta
     return stats, units

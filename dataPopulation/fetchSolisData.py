@@ -1,11 +1,13 @@
 #!/usr/bin/python
 import os
+import random
 import sqlite3
 import requests
 import json
 import datetime
 import time
 from sqlite3 import Error
+import PySimpleGUI as sg
 
 CONFIG = "C:\\dev\\solar\\"
 
@@ -34,12 +36,12 @@ def _login(session, user, passwd):
         resultJson = resultData.json()
         if resultJson.get('result') and resultJson.get('result').get('isAccept', 0) == 1:
             loginOK = True
-            print('Login successful for %s' % user)
+            sg.Print('Login successful for %s' % user)
         else:
             raise Exception(json.dumps(resultJson))
     except Exception as e:
         print(e)
-        print('Login failed for %s' % user)
+        sg.Print('Login failed for %s' % user)
     
     return loginOK
 
@@ -51,7 +53,7 @@ def _getPlantId(session):
     resultJson = resultData.json()
 
     plantId = resultJson['result']['pagination']['data'][0]['plantId']
-    print('Found plantId: %s' % plantId)
+    sg.Print('Found plantId: %s' % plantId)
     return plantId
 
 def _fetch(user, passwd, start, end, cachedDates):
@@ -67,7 +69,7 @@ def _fetch(user, passwd, start, end, cachedDates):
         while workingDay <= end:
             if workingDay.strftime("%Y-%m-%d") not in cachedDates:
                 fetchdate = workingDay.strftime("%Y/%m/%d") #"2022/10/13"
-                print ("Fetching data for " + fetchdate)
+                sg.Print ("Fetching data for " + fetchdate)
                 url = 'http://' + DOMAIN + '/cpro/epc/plantDetail/showCharts.json'
                 params = {
                     'plantId': int(plantId),
@@ -82,8 +84,11 @@ def _fetch(user, passwd, start, end, cachedDates):
                 
                 d, stat = _processOneDayFetch(resultJson)
                 stats[d] = stat
+                throttle = 0.7 + random.uniform(0.0, 0.5)
+                sg.Print("Throttling (" + str(throttle) + " seconds)...")
+                time.sleep(throttle)
             else:
-                print ("Already had data for " + workingDay.strftime("%Y/%m/%d") + ", skipping" )
+                sg.Print ("Already had data for " + workingDay.strftime("%Y/%m/%d") + ", skipping" )
             workingDay += delta
     return stats
 
@@ -133,6 +138,8 @@ def _common(user, passwd, start, end, storageFolder):
         old_data.update(stats)
         with open(os.path.join(storageFolder, "solisstats.json"), 'w') as f:
             json.dump(old_data, f)
+        sg.Print("Fetched data has been cached in file: " + storageFolder + "/solisstats.json")
+        sg.Print("'Quit' will close the window without exiting the programme")
     except Exception as e:
         print('%s : %s' % (type(e).__name__, str(e)))
     return old_data
