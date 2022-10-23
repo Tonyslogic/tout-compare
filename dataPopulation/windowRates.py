@@ -110,8 +110,8 @@ def _renderOneRatePlan(ratePlan, defaultRatePlan):
             [sg.Text('Last update', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-RATE_PLAN_DATE-', default_text=rateDate)],
             [sg.Text('Reference', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-RATE_PLAN_REF-', default_text=reference)],
             [sg.Text('======================================================================================', size=(86,1))],
-            [sg.Text('The plan must include at least one day profile. Day profiles are separated by \'====\'. Additional day profiles are needed for weekend rates. Between all day profiles, each day must be covered. The hourly ranges in each day profile must cover the full 24 hours. The end of one range must be the start of the next. Hours are integer values.', size=(86,3))],
-            [sg.Text('You can add a range to a day profile by populating the fields (making sure the \'From\' is the same as the previous \'To\') below the \'-----\' and pressing \'Add\'. Note that the costs of adjacent ranges must be different, or they will be merged. Similarly make sure the times and costs line up before deleting a range.', size=(86,3))],
+            [sg.Text('The plan must include at least one day profile. Day profiles are separated by \'====\'. Between all day profiles, each day must be covered. The hourly ranges in each day profile must cover the full 24 hours. The end of one range must be the start of the next. Hours are integer values.', size=(86,3))],
+            [sg.Text('You can add a range to a day profile by populating the fields below the \'-----\' and pressing \'Add\'. Note that the costs of adjacent ranges must be different, or they will be merged. Similarly make sure the times and costs line up before deleting a range.', size=(86,3))],
             [sg.Text('======================================================================================', size=(86,1))]
     ]
     if len(rateEntries) == 0: 
@@ -141,15 +141,16 @@ def _renderOneRatePlan(ratePlan, defaultRatePlan):
         #TEST
 
         for r, rate in enumerate(rateRange):
+            noDel = True if r == 0 else False
             left_col.append([
-                sg.Text('From (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-RATE_BEGIN' + str(i) + str(r), default_text=rate["begin"]),
+                sg.Text('From (hr)', size=(15,1)), sg.In(size=(8,1), disabled=True, enable_events=True ,key='-RATE_BEGIN' + str(i) + str(r), default_text=rate["begin"]),
                 sg.Text('To (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-RATE_END' + str(i) + str(r), default_text=rate["end"]),
                 sg.Text('Rate (cents)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-RATE_PRICE' + str(i) + str(r), default_text=rate["price"]),
-                sg.Button('Del', size=(6,1), key='-DEL_DAY_RATE-' + str(i) + str(r))
+                sg.Button('Del', size=(6,1), disabled=noDel, key='-DEL_DAY_RATE-' + str(i) + str(r))
                 ])
         left_col.append([sg.Text('--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------', size=(86,1))])
         left_col.append([
-                sg.Text('From (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-NEW_RATE_BEGIN' + str(i), default_text=0),
+                sg.Text('From (hr)', size=(15,1)), sg.In(size=(8,1), disabled=True, enable_events=True ,key='-NEW_RATE_BEGIN' + str(i), default_text=0),
                 sg.Text('To (hr)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-NEW_RATE_END' + str(i), default_text=24),
                 sg.Text('Rate (cents)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-NEW_RATE_PRICE' + str(i), default_text=0),
                 sg.Button('Add', size=(6,1), key='-ADD_HR_RANGE-' + str(i))
@@ -257,13 +258,25 @@ def _editRatePlan(ratePlan, defaulteRateDate):
                 updateDisabled, saveStatus = _checkForMissingDays(ratePlan["Rates"])
                 ratePlanWindow['-UPDATE_RATE_PLAN-'].update(disabled=updateDisabled)
                 ratePlanWindow['-UPDATE_RATE_PLAN_STATUS-'].update(value=saveStatus)
-                
+            if str(event).startswith('-RATE_END'):
+                dtindex = int(event[-2])
+                rowindex = int(event[-1])
+                nextRowBegin = '-RATE_BEGIN' + str(dtindex) + str(rowindex + 1)
+                nextBegin = values[str(event)]
+                if nextRowBegin in ratePlanWindow.AllKeysDict:
+                    ratePlanWindow[nextRowBegin].update(value=nextBegin)
+                else: 
+                    ratePlanWindow['-NEW_RATE_BEGIN' + str(dtindex)].update(value=nextBegin)
+                ratePlanWindow.refresh()
             if str(event).startswith('-DEL_DAY_RATE'):
                 dtindex = int(event[-2])
                 rowindex = int(event[-1])
+                previousRateKey = '-RATE_PRICE' + str(dtindex) + str(rowindex -1)
+                previousRate = values[previousRateKey]
+                thisRateKey = '-RATE_PRICE' + str(dtindex) + str(rowindex)
+                values[thisRateKey] = previousRate
                 latestRanges = _scrapeLatestRateRange(values)
                 latestDayTypes = _scrapeLatestDayTypes(values)
-                del latestRanges[str(dtindex)][rowindex]
                 new = _getHourlyRates(latestRanges[str(dtindex)])
                 ratePlan["Rates"][dtindex]["Hours"] = new
                 ratePlan["Rates"][dtindex]["Days"] = latestDayTypes[str(dtindex)]
