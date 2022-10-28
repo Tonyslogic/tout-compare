@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import collections
 import datetime
 from dateutil.relativedelta import *
+import calendar
 
 import PySimpleGUI as sg
 
@@ -360,17 +361,39 @@ def _loadPricePlans(configLocation):
 def _buildRateLookup(rates):
     lookup = dict()
     for rate in rates:
+        innerLookup = dict()
+        # Assume the date range is valid -- this was checked on data input
+        # See windowRates.py _checkForMissingDays
+        try: # in case we are upgrading from rates without date ranges
+            startMonth = int(rate["startDate"].split("/")[0])
+            startDay = int(rate["startDate"].split("/")[1])
+            endMonth = int(rate["endDate"].split("/")[0])
+            endDay = int(rate["endDate"].split("/")[1])
+        except:
+            startMonth = 1
+            startDay = 1
+            endMonth = 12
+            endDay = 31
         hours = rate["Hours"]
         for day in rate["Days"]:
-            lookup[day] = {}
+            innerLookup[day] = {}
             for hour, hourlyrate in enumerate(hours):
-                lookup[day][(hour*60, (hour+1)*60)] = hourlyrate
+                innerLookup[day][(hour*60, (hour+1)*60)] = hourlyrate
+        startDOY = (datetime.datetime(2001, startMonth, startDay)-datetime.datetime(2001, 1, 1)).days
+        endDOY = (datetime.datetime(2001, endMonth, endDay)-datetime.datetime(2001, 1, 1)).days
+        doy = startDOY
+        while doy <= endDOY:
+            lookup[doy] = innerLookup
+            doy += 1
 
     return lookup
 
-def _getRate(rateLookup, dow, mod):
+def _getRate(rateLookup, dow, mod, date):
+    dateBits = date.split("-")
+    doy = (datetime.datetime(2001, int(dateBits[1]), int(dateBits[2]))-datetime.datetime(2001, 1, 1)).days
+    if (calendar.isleap(int(dateBits[0]))) and doy > 58: doy -= 1 # Feb 29 --> Feb 28
     rate = 0
-    ranges = rateLookup[dow]
+    ranges = rateLookup[doy][dow]
     for key in ranges:
         if key[0] < mod < key[1]:
             rate = ranges[key]
@@ -382,7 +405,7 @@ def _getCosts(usage, rateLookup, feedInRate):
     buy = 0
     sell = 0
     for use in usage:
-        rate = _getRate(rateLookup, use[2], use[1])
+        rate = _getRate(rateLookup, use[2], use[1], use[0])
         buy += use[4] * rate
         sell += use[3] * feedInRate
 
