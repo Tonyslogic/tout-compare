@@ -381,10 +381,20 @@ def _buildRateLookup(rates):
                 innerLookup[day][(hour*60, (hour+1)*60)] = hourlyrate
         startDOY = (datetime.datetime(2001, startMonth, startDay)-datetime.datetime(2001, 1, 1)).days
         endDOY = (datetime.datetime(2001, endMonth, endDay)-datetime.datetime(2001, 1, 1)).days
-        doy = startDOY
-        while doy <= endDOY:
-            lookup[doy] = innerLookup
-            doy += 1
+        if startDOY > endDOY:
+            doy = endDOY
+            while doy <= 364:
+                lookup[doy] = innerLookup
+                doy += 1
+            doy = 0
+            while doy <= startDOY:
+                lookup[doy] = innerLookup
+                doy += 1
+        else:
+            doy = startDOY
+            while doy <= endDOY:
+                lookup[doy] = innerLookup
+                doy += 1
 
     return lookup
 

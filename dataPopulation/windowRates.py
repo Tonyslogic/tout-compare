@@ -221,11 +221,23 @@ def _checkForMissingDays(rateEntries):
     # Overlapping date ranges
     fullYearTest = set()
     for rangeKey, range in dtRanges.items():
-        fullYearTest = fullYearTest | {*_inclusiveRange(range[0], range[1])}
+        if range[0] > range[1]:
+            fullYearTest = fullYearTest | {*_inclusiveRange(range[0], 364)}
+            fullYearTest = fullYearTest | {*_inclusiveRange(0, range[1])}
+        else:
+            fullYearTest = fullYearTest | {*_inclusiveRange(range[0], range[1])}
         for testKey, testRange in dtRanges.items():
             if testKey == rangeKey: continue
-            if _overlapCheck(_inclusiveRange(range[0], range[1]), _inclusiveRange(testRange[0],testRange[1])) > 0:
-                return True, "Overlapping ranges detected between " + rangeKey + " and " + testKey
+            ret = False
+            if range[0] > range[1]:
+                if _overlapCheck(_inclusiveRange(range[0], 364), _inclusiveRange(testRange[0],testRange[1])) > 0: ret = True
+                if _overlapCheck(_inclusiveRange(0, range[1]), _inclusiveRange(testRange[0],testRange[1])) > 0: ret = True
+            elif testRange[0] > testRange[1]:
+                if _overlapCheck(_inclusiveRange(range[0], range[1]), _inclusiveRange(testRange[0],364)) > 0: ret = True
+                if _overlapCheck(_inclusiveRange(range[0], range[1]), _inclusiveRange(0, testRange[1])) > 0: ret = True
+            else:   
+                if _overlapCheck(_inclusiveRange(range[0], range[1]), _inclusiveRange(testRange[0],testRange[1])) > 0: ret = True
+            if ret: return True, "Overlapping ranges detected between " + rangeKey + " and " + testKey
     
     # Full year covered
     fullYear = {*_inclusiveRange(0, 364)}
