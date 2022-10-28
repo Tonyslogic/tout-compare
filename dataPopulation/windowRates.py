@@ -134,6 +134,13 @@ def _renderOneRatePlan(ratePlan, defaultRatePlan):
             sg.Checkbox('Fri', size=(5,1), default=5 in rateEntry["Days"], key='-RATE_DAY_5' + str(i), enable_events=True),
             sg.Checkbox('Sat', size=(5,1), default=6 in rateEntry["Days"], key='-RATE_DAY_6' + str(i), enable_events=True)
         ])
+        if "startDate" not in rateEntry: rateEntry["startDate"] = "01/01"
+        if "endDate" not in rateEntry: rateEntry["endDate"] = "12/31"
+        left_col.append([
+            sg.Text('Applicable dates:', size=(15,1)),
+                sg.Text('From (MM/DD)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-DATE_BEGIN' + str(i), default_text=rateEntry["startDate"]),
+                sg.Text('To (MM/DD)', size=(15,1)), sg.In(size=(8,1), enable_events=True ,key='-DATE_END' + str(i), default_text=rateEntry["endDate"])
+        ])
 
         rateRange = _getRateRange(rateEntry["Hours"])
         #TEST
@@ -159,28 +166,81 @@ def _renderOneRatePlan(ratePlan, defaultRatePlan):
         left_col.append([sg.Text('======================================================================================', size=(86,1))])
     
     left_col.append([sg.Button('Add another day profile', key='-ADD_DAY_RATE-', size=(30,1))])
-    left_col.append([sg.Button('Update and close', key='-UPDATE_RATE_PLAN-', size=(30,1), disabled=updateDisabled), sg.Text(saveStatus, key='-UPDATE_RATE_PLAN_STATUS-', size=(30,1))])
+    left_col.append([sg.Button('Update and close', key='-UPDATE_RATE_PLAN-', size=(30,1), disabled=updateDisabled), sg.Text(saveStatus, key='-UPDATE_RATE_PLAN_STATUS-', size=(50,1))])
     layout = [[sg.Column(left_col, element_justification='l', size=(700, 700), expand_x=True, expand_y=True, scrollable=True,  vertical_scroll_only=True)]]    
     window = sg.Window('Rate plan editor', layout,resizable=True)
         
     return window
 
 def _checkForMissingDays(rateEntries):
-    updateDisabled = False
-    saveStatus = ""
-    days = [0,1,2,3,4,5,6]
-    missingdays = [0,1,2,3,4,5,6]
-    for day in days:
-        for rateEntry in rateEntries:
-            if day in rateEntry["Days"]:
-                try:
-                    missingdays.remove(day)
-                except:
-                    pass
-    if len(missingdays) > 0:
-        updateDisabled = True
-        saveStatus = "Not all days covered"
-    return updateDisabled,saveStatus
+    lookup = defaultdict(dict)
+    dtRanges = {}
+    dtDays = {} # Duplicate day check
+    # Format
+    # 02/29 ==> 02/28
+    for rateEntry in rateEntries:
+        if "startDate" not in rateEntry: rateEntry["startDate"] = "01/01"
+        if "endDate" not in rateEntry: rateEntry["endDate"] = "12/31"
+        try:
+            startMonth = int(rateEntry["startDate"].split("/")[0])
+            startDay = int(rateEntry["startDate"].split("/")[1])
+            endMonth = int(rateEntry["endDate"].split("/")[0])
+            endDay = int(rateEntry["endDate"].split("/")[1])
+            # Silently remove leap day. This is handled in the lookup if the year is a leap
+            if (startMonth == 2 and startDay == 29): startDay = 28
+            if (endMonth == 2 and endDay == 29): endDay = 28
+            dateRange = "{:02d}".format(startMonth) + ",{:02d}".format(startDay) + ",{:02d}".format(endMonth) + ",{:02d}".format(endDay)
+            startDOY = (datetime.datetime(2001, startMonth, startDay)-datetime.datetime(2001, 1, 1)).days
+            endDOY = (datetime.datetime(2001, endMonth, endDay)-datetime.datetime(2001, 1, 1)).days
+            dtRanges[dateRange] = (startDOY, endDOY)
+            if dateRange not in dtDays: dtDays[dateRange] = [rateEntry["Days"]]
+            else: dtDays[dateRange].append(rateEntry["Days"])
+        except:
+            return True, "Bad date format " + rateEntry["startDate"] + ", " + rateEntry["endDate"]
+        
+        # duplicate days in a date range
+        for rangeKey, dayLists in dtDays.items():
+            for idx, daySet in enumerate(dayLists):
+                for idx2, daySet2 in enumerate(dayLists):
+                    if idx != idx2:
+                        if len(set(daySet) & set(daySet2)) != 0:
+                            return True, "Duplicate days detected in date range " + rangeKey
+        
+        # prepare, DOW check in each date range
+        # hours = rateEntry["Hours"]
+        for day in rateEntry["Days"]:
+            lookup[dateRange][day] = {}
+            # for hour, hourlyrate in enumerate(hours):
+            #     lookup[dateRange][day][(hour*60, (hour+1)*60)] = hourlyrate
+    
+    # DOW in each date range
+    for rangeKey, range in lookup.items():
+        if len(range.keys()) != 7:
+            return True, "Missing days in date range " + rangeKey
+    
+    # Overlapping date ranges
+    fullYearTest = set()
+    for rangeKey, range in dtRanges.items():
+        fullYearTest = fullYearTest | {*_inclusiveRange(range[0], range[1])}
+        for testKey, testRange in dtRanges.items():
+            if testKey == rangeKey: continue
+            if _overlapCheck(_inclusiveRange(range[0], range[1]), _inclusiveRange(testRange[0],testRange[1])) > 0:
+                return True, "Overlapping ranges detected between " + rangeKey + " and " + testKey
+    
+    # Full year covered
+    fullYear = {*_inclusiveRange(0, 364)}
+    if len(fullYear.difference(fullYearTest)) > 0:
+        return True, "Some dates are missing"
+    
+    return False, "OK"
+
+def _inclusiveRange(a, b):
+    return range(a, b+1)
+
+def _overlapCheck(range1, range2): 
+    xs = set(range1)
+    ret = xs.intersection(range2)  
+    return len(ret)
 
 def _scrapeLatestDayTypes(values):
     # {"0": [0,1,2,3,4,5,6]}
@@ -243,8 +303,7 @@ def _editRatePlan(ratePlan, defaulteRateDate):
             ratePlan = oldRatePlan
             break
         try: 
-            ratePlanWindow['-UPDATE_RATE_PLAN-'].update(disabled=False)
-            if str(event).startswith('-RATE_DAY_'): 
+            if str(event).startswith('-RATE_DAY_') or str(event).startswith('-DATE'): 
                 _getSimpleProps(ratePlan, values)
                 # and the day types, including the hourly rates
                 latestRanges = _scrapeLatestRateRange(values)
@@ -253,7 +312,9 @@ def _editRatePlan(ratePlan, defaulteRateDate):
                 for index in range(0, len(latestRanges)):
                     r = _getHourlyRates(latestRanges[str(index)])
                     dt = latestDayTypes[str(index)]
-                    rates.append({"Days": dt, "Hours": r})
+                    startDate = values['-DATE_BEGIN' + str(index)]
+                    endDate = values['-DATE_END' + str(index)]
+                    rates.append({"Days": dt, "Hours": r, "startDate": startDate, "endDate": endDate})
                 ratePlan["Rates"] = rates
                 updateDisabled, saveStatus = _checkForMissingDays(ratePlan["Rates"])
                 ratePlanWindow['-UPDATE_RATE_PLAN-'].update(disabled=updateDisabled)
@@ -310,9 +371,11 @@ def _editRatePlan(ratePlan, defaulteRateDate):
                 for index in range(0, len(latestRanges)):
                     r = _getHourlyRates(latestRanges[str(index)])
                     dt = latestDayTypes[str(index)]
-                    rates.append({"Days": dt, "Hours": r})
+                    startDate = values['-DATE_BEGIN' + str(index)]
+                    endDate = values['-DATE_END' + str(index)]
+                    rates.append({"Days": dt, "Hours": r, "startDate": startDate, "endDate": endDate})
                 ratePlan["Rates"] = rates
-                ratePlan["Rates"].append({"Days": [0,1,2,3,4,5,6], "Hours": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]})
+                ratePlan["Rates"].append({"Days": [0,1,2,3,4,5,6], "Hours": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "startDate": "01/01", "endDate": "12/31"})
                 _getSimpleProps(ratePlan, values)
                 ratePlanWindow.close()
                 ratePlanWindow = _renderOneRatePlan(ratePlan, defaulteRateDate)
@@ -327,7 +390,9 @@ def _editRatePlan(ratePlan, defaulteRateDate):
             for index in range(0, len(latestRanges)):
                 r = _getHourlyRates(latestRanges[str(index)])
                 dt = latestDayTypes[str(index)]
-                rates.append({"Days": dt, "Hours": r})
+                startDate = values['-DATE_BEGIN' + str(index)]
+                endDate = values['-DATE_END' + str(index)]
+                rates.append({"Days": dt, "Hours": r, "startDate": startDate, "endDate": endDate})
             ratePlan["Rates"] = rates
 
             ratePlanWindow.close()
