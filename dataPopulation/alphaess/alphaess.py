@@ -10,7 +10,7 @@ from voluptuous import Optional
 
 BASEURL = "https://cloud.alphaess.com/api"
 AUTHPREFIX = "al8e4s"
-AUTHCONSTANT = "LSZYDA95JVFQKV7PQNODZRDZIS4EDS0EED8BCWSS"
+AUTHCONSTANT = "LS885ZYDA95JVFQKUIUUUV7PQNODZRDZIS4ERREDS0EED8BCWSS"
 AUTHSUFFIX = "ui893ed"
 
 class alphaess:
@@ -43,8 +43,9 @@ class alphaess:
 
         resource = f"{BASEURL}/Account/Login"
 
-        async with aiohttp.ClientSession(raise_for_status=True) as session:
+        async with aiohttp.ClientSession(raise_for_status=True,trust_env=True) as session:
             try:
+                
                 headers = self.__headers()
                 response = await session.post(
                     resource,
@@ -85,7 +86,7 @@ class alphaess:
                 logger.error(e)
                 raise
 
-    async def __refresh(self,) -> bool:
+    async def __refresh(self) -> bool:
         """Refresh."""
 
         resource = f"{BASEURL}/Account/RefreshToken"
@@ -104,7 +105,10 @@ class alphaess:
                 if response.status == 200:
                     json_response = await response.json()
                     if "info" in json_response and json_response["info"] != "Success":
-                        raise aiohttp.ClientResponseError(response.request_info, response.history, status=response.status, message=json_response["info"])
+                        if "token is expire" in json_response["info"].casefold():
+                            return False
+                        else:
+                            raise aiohttp.ClientResponseError(response.request_info, response.history, status=response.status, message=json_response["info"])
                     if "AccessToken" in json_response["data"]:
                         self.accesstoken = json_response["data"]["AccessToken"]
                     if "ExpiresIn" in json_response["data"]:
@@ -135,11 +139,11 @@ class alphaess:
         """Check if API needs re-authentication."""
 
         if (self.accesstoken is not None) and (self.tokencreatetime is not None) and (self.expiresin is not None) and (self.refreshtoken is not None):
-            if datetime.utcnow() < (self.tokencreatetime + timedelta(seconds=(self.expiresin - 60))):
+            if datetime.utcnow() < (self.tokencreatetime + timedelta(seconds=(self.expiresin - 600))):
                 logger.debug("API authentication token remains valid")
                 return True
             else:
-                return await self.__refresh()
+                return True if await self.__refresh() else await self.authenticate(self.username, self.password)
         return await self.authenticate(self.username, self.password)
 
     async def getOneDayStatsData(self, day) -> Optional(list):
@@ -149,7 +153,7 @@ class alphaess:
             alldata = []
             units = await self.__get_data("Account/GetCustomMenuESSList")
             logger.debug(alldata)
-            
+
             for unit in units:
                 if "sys_sn" in unit:
                     serial = unit["sys_sn"]
@@ -272,18 +276,9 @@ class alphaess:
         """Get daily energy statistics"""
 
         todaydate = date.today().strftime("%Y-%m-%d")
-        json = {
-            "beginDay": todaydate,
-            "endDay": todaydate,
-            "tDay": todaydate,
-            "isOEM": 0,
-            "SN": serial,
-            "userId": "",
-            "noLoading": True,
-        }
 
         logger.debug("Trying to retrieve daily statistics for serial %s, date %s", serial, todaydate)
-        return await self.__post_data(path="Power/SticsByPeriod", json=json)
+        return await self.__get_data(path=f"Power/SticsByPeriod?beginDay={todaydate}&endDay={todaydate}&tDay={todaydate}&isOEM=0&SN={serial}&userID=&noLoading=true")
 
     async def __system_statistics(self, serial):
         """Get system statistics"""
@@ -303,16 +298,8 @@ class alphaess:
     async def __powerdata(self, serial):
         """Get power data"""
 
-        todaydate = date.today().strftime("%Y-%m-%d")
-        json = {
-            "SN": serial,
-            "noLoading": True,
-            "userId": "",
-            "isOEM": 0,
-            "sys_sn": serial
-        }
-        logger.debug("Trying to retrieve power data for serial %s, date %s", serial, todaydate)
-        return await self.__post_data(path=f"ESS/GetLastPowerDataBySN?noLoading=true&sys_sn={serial}", json=json)
+        logger.debug("Trying to retrieve power data for serial %s", serial)
+        return await self.__get_data(path=f"ESS/GetLastPowerDataBySN?noLoading=true&sys_sn={serial}")
 
     async def __settings(self, systemid):
         """Retrieve ESS custom settings by serial number from Alpha ESS"""
