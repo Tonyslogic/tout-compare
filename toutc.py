@@ -21,12 +21,13 @@ from dataPopulation.makedbFromProfile import _guiDBFromProfile
 from dataPopulation.windowGenerateProfile import genProfile, _saveProfile
 from dataPopulation.windowRates import getRates, _updateRates
 from dataPopulation.makedbFromEISmartDataFile import guiDBFromEISmartMeter
+from dataPopulation.makedbFromESBNSmartDataFile import guiDBFromESBNSmartMeter
 from dataPopulation.loadDefaultSolar import loadDefaultSolar
 from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "v0.0.29"
+VERSION = "v0.0.30"
 
 MAIN_WINDOW = None
 
@@ -439,6 +440,7 @@ def _getLoadProfile():
         [sg.Button('Load profile from Solis cloud', key='-LOAD_SOLIS-', size=(25,1)), sg.Text("Requires Solis cloud login", size=(24,1))],
         [sg.Button('Generate profile', key='-LOAD_GENERATE-', size=(25,1)), sg.Text("Estimate your own profile", size=(24,1))],
         [sg.Button('Load profile from Electric Ireland', key='-LOAD_EI-', size=(25,1), disabled=False), sg.Text("Requires smart meter data", size=(24,1))],
+        [sg.Button('Load profile from ESBN', key='-LOAD_ESBN-', size=(25,1), disabled=False), sg.Text("Requires smart meter data", size=(24,1))],
         [sg.Button('Standard Load profile', key='-LOAD_SLP-', size=(25,1), disabled=False), sg.Text("Average usage from ESBN", size=(24,1))],
         [sg.Button('OK', key='-OK-', size=(25,1))]
     ]
@@ -459,6 +461,8 @@ def _getLoadProfile():
             _generateLoadProfile()
         if event == '-LOAD_EI-': 
             guiDBFromEISmartMeter(CONFIG)
+        if event == '-LOAD_ESBN-': 
+            guiDBFromESBNSmartMeter(CONFIG)
         if event == '-LOAD_SLP-': 
             guiDBFromSLP(CONFIG)
         if event == '-OK-': 

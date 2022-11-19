@@ -55,7 +55,7 @@ The load shifting and car charging are found here. They both work in similar way
 
 ![Scenario editing](./docs/ScenarioEdit.png)
 
-The usage profile is used to capture how electricity load varies over the year. There are several ways to source this data. If you have an inverter, you may be able to download the data directly (AlphaESS is integrated). If you have a smart meter, you can get the data from your supplier (Electric Ireland smart meter datafile is done). If you have neither, you can generate a load profile (if you have a rough idea when you use electricity) or use the "Standard Load Profile" mandated by the CRU for smart meter SST comparison sites.
+The usage profile is used to capture how electricity load varies over the year. There are several ways to source this data. If you have an inverter, you may be able to download the data directly (AlphaESS and SolisCloud are integrated). If you have a smart meter, you can get the data from your supplier (Electric Ireland smart meter datafile is done), or from ESBN. If you have neither, you can generate a load profile (if you have a rough idea when you use electricity) or use the "Standard Load Profile" mandated by the CRU for smart meter SST comparison sites.
 
 ![Profile options](./docs/ProfileOptions.png)
 ![Alpha ESS input](./docs/AlphaESSInput.png)
@@ -81,15 +81,12 @@ If follows the same use pattern as for scenarios, load shifting, and car chargin
 
 ![Rate editor](./docs/RateEditor.png)
 
-There are a couple of things to note when editing the rates:
+There are a couple of things to note when editing the rates, the app tries to automate a lot of this:
 
 * The day range must start with 0 and end with 24
 * Only whole hours (integers) are accepted, 24Hr clock.
 * Each range must start at the end of the previous
 * Adjacent ranges with the same cost will be merged
-* When adding a new range you must start with the previous, and follow the steps below
-
-![Day profile edit](./docs/RateDateProfile.png)
 
 Creating rates is tedious. It is recommended to save a backup of the 'rates.json' from the configuration folder to a safe place. As with the load profile using it later is as simple as copying it into the new configuration folder. Alternatively, you can add the content of a rates.json using the import button.
 
