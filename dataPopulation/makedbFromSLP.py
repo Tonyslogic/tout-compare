@@ -13,8 +13,7 @@ import pandas as pd
 
 # from smart_lps import SMART_LP25
 # from smart_lps import SMART_LP27 
-from dataPopulation.smart_lps import SMART_LP25
-from dataPopulation.smart_lps import SMART_LP27 
+from dataPopulation.smart_lps import SMART_LP25, SMART_LP27, HR24_LP1, HR24_LP3, DN_LP2, DN_LP4 
 
 CONFIG = "C:\\dev\\solar\\"
 STORAGE = "C:\\dev\\solar\\"
@@ -67,11 +66,13 @@ def _createDB(dbFile):
     except Error as e:
         print(e)
 
-def _create_rows(smartMeterData, annualUsage):
+def _create_rows(loadProfileData, annualUsage):
     ret = []
 
-    for _, row in smartMeterData.iterrows():
-        DBDate = row['Date'].strip()
+    for _, row in loadProfileData.iterrows():
+        dt = datetime.datetime.strptime(row['Date'].strip(), '%d/%m/%Y')
+        DBDate = datetime.datetime.strftime(dt, "%Y-%m-%d")
+        # DBDate = row['Date'].strip()
         DBNormalPV = 0
         DBDayOfWeek = datetime.datetime.strftime(datetime.datetime.strptime(DBDate, '%Y-%m-%d'), "%w")
         DBMinuteOfDay = 0
@@ -95,14 +96,14 @@ def _getStandardLPData():
     
     lpData = None
     annualUsage = 4200
-    meterTypes = ["Urban", "Rural"]
-    meterType = "Urban"
+    meterTypes = ["Smart Urban", "Smart Rural", "NightSaver Urban", "NightSaver Rural", "24Hr Urban", "24Hr Rural"]
+    meterType = "Smart Urban"
 
     left_col = [
-            [sg.Text('This will wipe the DB and add data from the Irish standard load profile (Nov 21). You can learn more here: https://rmdservice.com/standard-load-profiles/', size=(55,2))],
+            [sg.Text('This will wipe the DB and add data from the Irish standard load profile (Nov 22). You can learn more here: https://rmdservice.com/standard-load-profiles/', size=(55,2))],
             [sg.Text('Select the meter type (Urban or Rural), and specify the annual usage in kWh. Then "Load"', size=(55,1))],
             [sg.Text('====================================================================================', size=(55,1))],
-            [sg.Text('Smart meter type', size=(24,1)), sg.Combo(meterTypes, default_value="Urban", size=(25,1), readonly=True, key="-TYPE-")],
+            [sg.Text('Meter type', size=(24,1)), sg.Combo(meterTypes, default_value="Smart Urban", size=(25,1), readonly=True, key="-TYPE-")],
             [sg.Text('Annual usage (kWh)', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-USAGE-', default_text="4200")],
             [sg.Button('Load', key='-LOAD-', disabled=False, size=(15,1)), sg.Button('Close', key='-CLOSE-', size=(15,1)) ]
     ]
@@ -120,7 +121,12 @@ def _getStandardLPData():
     window.close()
     
     if meterType is not None:
-        if meterType == "Urban": lpData = pd.read_csv(StringIO(SMART_LP25)) 
+        if meterType == "Smart Urban": lpData = pd.read_csv(StringIO(SMART_LP25)) 
+        if meterType == "Smart Rural": lpData = pd.read_csv(StringIO(SMART_LP27)) 
+        if meterType == "NightSaver Urban": lpData = pd.read_csv(StringIO(DN_LP2)) 
+        if meterType == "NightSaver Rural": lpData = pd.read_csv(StringIO(DN_LP4)) 
+        if meterType == "24Hr Urban": lpData = pd.read_csv(StringIO(HR24_LP1)) 
+        if meterType == "24Hr Rural": lpData = pd.read_csv(StringIO(HR24_LP3)) 
         else: lpData = pd.read_csv(StringIO(SMART_LP27)) 
     
     return lpData, annualUsage
@@ -140,16 +146,6 @@ def guiDBFromSLP(config):
 
 
 def main():
-    # env = {}
-    # with open(os.path.join(CONFIG,"EnvProperties.json"), 'r') as f:
-    #     env = json.load(f)
-    
-    # lpData = pd.read_csv(StringIO(SMART_LP25))
-
-    # dbFile = os.path.join(env["StorageFolder"], env["DBFileName"])
-    # _createDB(dbFile)
-    # rows = _create_rows (lpData, 8000)
-    # _fillDB(dbFile, rows)
     guiDBFromSLP(CONFIG)
 
 if __name__ == "__main__":
