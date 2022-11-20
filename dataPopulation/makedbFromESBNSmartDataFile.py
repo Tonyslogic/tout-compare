@@ -110,14 +110,14 @@ def _create_rows(smartMeterData):
         dt = datetime.datetime.strptime(dts, '%d-%m-%Y %H:%M')
         DBDate = datetime.datetime.strftime(dt, "%Y-%m-%d")
         DBDayOfWeek = datetime.datetime.strftime(dt, "%w")
-        DBNormalLoad = float(row[valueKey])/6
+        DBNormalLoad = float(row[valueKey])/6/2 # 5 minute intrvals and kW to kWh
 
         DB_min = datetime.datetime.strftime(dt, "%H:%M")
         DBMinuteOfDay = int(datetime.datetime.strftime(dt, "%H"))*60 + int(datetime.datetime.strftime(dt, "%M"))
         ret.append((DBDate, DB_min, DBNormalLoad, DBNormalPV, DBMinuteOfDay, DBDayOfWeek))
 
         for i in range(0,5):
-            dt = dt - delta
+            dt = dt + delta
             DB_min = datetime.datetime.strftime(dt, "%H:%M")
             DBMinuteOfDay = int(datetime.datetime.strftime(dt, "%H"))*60 + int(datetime.datetime.strftime(dt, "%M"))
             ret.append((DBDate, DB_min, DBNormalLoad, DBNormalPV, DBMinuteOfDay, DBDayOfWeek))
