@@ -282,13 +282,13 @@ def _setDiversions(diversion_c):
     global DIVERT
     DIVERT = diversion_c
     evdValidity = dict()
-    if DIVERT["HWD"]["active"]:
+    if DIVERT["HWD"] and DIVERT["HWD"]["active"]:
         gramsOfWater = DIVERT["HWD"]["usage"] * 1000
         tempRise = DIVERT["HWD"]["target"] - DIVERT["HWD"]["intake"]
         # Specific heat capacity of water = 4.2 J / g.K
         # 1KWH = 3.6 MJ 
         DIVERT["HWD"]["KWH"] = (gramsOfWater * tempRise * 4.2) / 3600000 
-    if DIVERT["EVD"]["active"]:
+    if DIVERT["EVD"] and DIVERT["EVD"]["active"]:
         c_months = diversion_c["EVD"]["months"]
         c_days = diversion_c["EVD"]["days"]
         c_begin = diversion_c["EVD"]["begin"]

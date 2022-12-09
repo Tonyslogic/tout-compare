@@ -27,7 +27,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "0.0.32"
+VERSION = "0.0.33"
 
 MAIN_WINDOW = None
 
