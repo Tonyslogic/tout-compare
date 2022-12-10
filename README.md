@@ -125,6 +125,13 @@ The 'Load profile & PV data graphs' show electricity usage (by hour, day and mon
 Selecting a saved simulation from the drop-down and clicking on 'Simulation results graphs' provides insights on when electricity is bought and sold. It also renders a graph that shows how generated electricity was distributed (to Electric Vehicle, Hot water, Battery, Export to grid, and Household load) by calendar month.
 ![Visualisation, PV distribution](./docs/VisPVDistribution.png)
 
+
+# Upgrade
+It's a good idea to back up the configuration and storage folders before doing an upgrade. Efforts are made to ensure compatability with previous versions. Software is never perfect.
+
+After upgrading, it is important to clear the cache of simulation results. To do this, navigate to the Scenarios window, and click on 'Clear DB cache'. This will remove only the simulation results. 
+
+![Upgrade, manual step](./docs/ScenarioNav2.png)
 # Design and dependencies
 The design is logically split into two: Data population and data processing.
 

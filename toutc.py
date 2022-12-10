@@ -1,6 +1,7 @@
 from ast import keyword
 import copy
 import datetime
+from dateutil.relativedelta import relativedelta
 import itertools
 import json
 from locale import locale_encoding_alias
@@ -27,7 +28,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "0.0.34"
+VERSION = "0.0.35"
 
 MAIN_WINDOW = None
 
@@ -482,22 +483,26 @@ def _showReportDB():
 
 def _callSimulate():
     begin = "2001-01-01"
+    valid_end = "2001-01-01"
     try:
         dbFile = os.path.join(STORAGE, DBFILE)
         conn = sqlite3.connect(dbFile)
         cur = conn.cursor()
-        cur.execute("SELECT min(Date) FROM dailysums")
+        cur.execute("SELECT min(Date), max(Date) FROM dailysums WHERE Load > 0")
         res = cur.fetchone()
         conn.close()
         begin = res[0]
+        ve = datetime.datetime.strptime(res[1], '%Y-%m-%d')
+        ve = ve + relativedelta(months=-1)
+        valid_end = datetime.datetime.strftime(ve, '%Y-%m-%d')
     except:
         pass
     end = 12
     left_col = [
-             [sg.Text('Start date', size=(24,1)), 
+             [sg.Text('Start date (valid dates from ' + begin + ' to ' + valid_end + ')', size=(24,2)), 
                 sg.In(size=(25,1), enable_events=True ,key='-CAL-', default_text=begin), 
                 sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, key='-CAL1-', format=('%Y-%m-%d'))],
-            [sg.Text('Number of months to simulate', size=(24,1)), 
+            [sg.Text('Number of months to simulate (Check you have enough data)', size=(24,2)), 
                 sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12"),
                 sg.Checkbox("Save sim data", size=(15,1), default=True, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-'),
                 sg.Checkbox("Use deemed export", size=(15,1), default=False, disabled=False, enable_events=True, key='-DEEMED_EXPORT-')],

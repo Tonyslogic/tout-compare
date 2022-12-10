@@ -227,7 +227,7 @@ def _simulate(df, start, finish):
             if DIVERT["HWD"]["active"]  and r[3] == 0:
                 totals["totalHWDNeed"] += DIVERT["HWD"]["KWH"]
  
-    print ("\tBuy: " + str(int(totals["totalBuy"])) + " KWh" + "; Sell: " + str(int(totals["totalFeed"])) + " KWh")
+    sg.Print ("\tBuy: " + str(int(totals["totalBuy"])) + " KWh" + "; Sell: " + str(int(totals["totalFeed"])) + " KWh")
     return res, totals
 
 def _loadDataFrameFromDB(dbFile):
@@ -433,7 +433,7 @@ def _showMeTheMoney(usage, pricePlans, deemed, start, finish):
         cost = {}
         cost["Supplier"] = plan["Supplier"]
         cost["Plan"] = plan["Plan"]
-        print ("\tWorking on plan: " + cost["Supplier"] + "::" + cost["Plan"])
+        sg.Print ("\tWorking on plan: " + cost["Supplier"] + "::" + cost["Plan"])
         rateLookup = _buildRateLookup(plan["Rates"])
         feedInRate = plan["Feed"]
         buy, sell = _getCosts(usage, rateLookup, feedInRate)
@@ -475,7 +475,7 @@ def _loadScenario(scenario):
     except: pass
     _setDiversions(diversion_c)
 
-    print ("Working on scenario: " + scenario["Name"])
+    sg.Print ("Working on scenario: " + scenario["Name"])
     return scenario["Name"]
 
 def double_click(event):
@@ -723,12 +723,12 @@ def _loadScenarioFromDB(dbFile, scenario, begin, end):
                 c.execute(sql_data)
                 res = c.fetchall()
                 foundInDB = True
-                print("\tLoaded " + scenario["Name"] + " from DB")
+                sg.Print("\tLoaded " + scenario["Name"] + " from DB")
         else:
             _deleteScenarioFromDB(CONFIG, md5)
     except Error as e:
         # print(totals)
-        print("\tScenario not found in DB: " + str(e))
+        sg.Print("\tScenario not found in DB: " + str(e))
     return foundInDB, res, totals
 
 def _getDeemedExportValue(start, finish, fit):
@@ -742,7 +742,7 @@ def guiMain(config, begin, end, save, deemed):
     CONFIG = config
     start = datetime.datetime.strptime(begin, '%Y-%m-%d')
     finish = start + relativedelta(months=int(end)) + datetime.timedelta(days=-1)
-    print ("Simulating from " + datetime.datetime.strftime(start, '%Y-%m-%d') + " to " + datetime.datetime.strftime(finish, '%Y-%m-%d'))
+    sg.Print ("Simulating from " + datetime.datetime.strftime(start, '%Y-%m-%d') + " to " + datetime.datetime.strftime(finish, '%Y-%m-%d'))
     
     env = {}
     with open(os.path.join(CONFIG, "EnvProperties.json"), 'r') as f:
