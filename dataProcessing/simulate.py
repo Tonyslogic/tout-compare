@@ -145,7 +145,7 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
     inputTemp = dailyDiversionTotals[date]["HWTemp"]
 
     # Failfast
-    if not DIVERT["HWD"]["active"] and not DIVERT["EVD"]["active"]: return hw_d, ev_d, dailyDiversionTotals
+    if not DIVERT["HWD"]["active"] and not DIVERT["EVD"]["active"]: return hw_d, ev_d
     
     if DIVERT["HWD"]["active"]:
         tank = DIVERT["HWD"]["tank"]
@@ -156,17 +156,13 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
             inputTemp = max (DIVERT["HWD"]["intake"], inputTemp - 0.333333333333333)
             # Reduce the temp to cater for usage: 70%@08:00 10%@14:00 20%@20:00
             hour = minuteOfDay // 60
-            # pydroid has an older version of python
-            # match hour:
-            #     case 8: usage = usage * 0.7
-            #     case 14: usage = usage * 0.1
-            #     case 20: usage = usage * 0.2
-            #     case _: usage = 0
             if hour == 8: usage = usage * 0.7
             elif hour == 14: usage = usage * 0.1
             elif hour == 20: usage = usage * 0.2
             else: usage = 0
-        inputTemp = ((tank - usage) * inputTemp + usage * DIVERT["HWD"]["intake"]) / tank
+            m1 = tank - usage
+            m2 = usage
+            inputTemp = (m1 * inputTemp + m2 * DIVERT["HWD"]["intake"]) / (m1 + m2)
         inputTemp = max (DIVERT["HWD"]["intake"], inputTemp)
 
         # The most that could be drawn (kWH) to get to the target temp
@@ -197,7 +193,7 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
     dailyDiversionTotals[date]["EV"] += ev_d
     # diversion = hw_d + ev_d
 
-    return hw_d, ev_d, dailyDiversionTotals 
+    return hw_d, ev_d 
 
 def _simulate(df, start, finish):
     res = []
@@ -214,7 +210,7 @@ def _simulate(df, start, finish):
             # newSOC, feed, buy = _processOneRow(soc, load, pv, cfg):
             newSOC, feed, buy, pvToCharge, pvToLoad, batToLoad = _processOneRow(newSOC, r[0] + cfgload + carload, r[1], cfg)
             # see if there any diversions in place, and reduce feed. Track dailymax EV and daily usage for water
-            hw_d, ev_d, dailyDiversionTotals = _divert(feed, r[2], r[3], r[4], dailyDiversionTotals)
+            hw_d, ev_d = _divert(feed, r[2], r[3], r[4], dailyDiversionTotals)
             feed = feed - (hw_d + ev_d)
             hwt = dailyDiversionTotals[r[2]]["HWTemp"]
             # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, pvToCharge, pvToLoad, batToLoad, pv
@@ -527,7 +523,7 @@ def _renderSimpleGUI(chartData, begin, end):
             break
         elif event == '-SIM_GRAPHS-': 
             if values["-SIM-"]:
-                _simDetails(dbFile, dbKeys[values["-SIM-"]], values["-SIM-"])
+                _simDetails(dbFile, dbKeys[values["-SIM-"]][0], values["-SIM-"])
         elif event == '-TABLE-CLICK-':
             column = values[event]
             # print(f'Click on column {column}')
@@ -699,7 +695,8 @@ def _loadScenarioFromDB(dbFile, scenario, begin, end):
     totals = {}
     md5 = _getActiveMD5(scenario)
     sql_find = "SELECT begin, end FROM scenarios WHERE md5 = '" + md5 + "'"
-    sql_data = "SELECT Date, MinuteOfDay, DayOfWeek, Feed, Buy, SOC, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV \
+    sql_data = "SELECT Date, MinuteOfDay, DayOfWeek, Feed, Buy, SOC, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, \
+                pvToCharge, pvToLoad, batToLoad, pv \
                 FROM scenariodata, scenarios WHERE md5 = '" + md5 + "' AND scenarios.id = scenariodata.scenarioID \
                 ORDER BY Date, MinuteOfDay ASC"
     sql_total = "SELECT totalFeed, totalBuy, totalEV, totalHWDiv, totalHWDNeed, totalEVDiv \

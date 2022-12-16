@@ -28,7 +28,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "0.0.35"
+VERSION = "0.0.36"
 
 MAIN_WINDOW = None
 
@@ -498,10 +498,11 @@ def _callSimulate():
     except:
         pass
     end = 12
+    start = datetime.datetime.strptime(begin, '%Y-%m-%d')
     left_col = [
-             [sg.Text('Start date (valid dates from ' + begin + ' to ' + valid_end + ')', size=(24,2)), 
+            [sg.Text('Start date (valid dates from ' + begin + ' to ' + valid_end + ')', size=(24,2)), 
                 sg.In(size=(25,1), enable_events=True ,key='-CAL-', default_text=begin), 
-                sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, key='-CAL1-', format=('%Y-%m-%d'))],
+                sg.CalendarButton('Change date', size=(25,1), target='-CAL-', pad=None, key='-CAL1-', format=('%Y-%m-%d'), default_date_m_d_y=(start.month, start.day, start.year))],
             [sg.Text('Number of months to simulate (Check you have enough data)', size=(24,2)), 
                 sg.In(size=(25,1), enable_events=True ,key='-SIM_MONTHS-', default_text="12"),
                 sg.Checkbox("Save sim data", size=(15,1), default=True, disabled=False, enable_events=True, key='-SAVE_SIM_OUTPUT-'),
