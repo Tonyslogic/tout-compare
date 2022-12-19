@@ -55,7 +55,7 @@ def _getSmartMeterFilename():
             [sg.Text("Rate (cents)", size=(9,1)), sg.In(size=(5,1), enable_events=True, key='-RATE-', default_text='21'),
              sg.Text('Start date', size=(7,1)), sg.In(size=(10,1), enable_events=True ,key='-SCAL-', default_text='2022-03-08'), 
                 sg.CalendarButton('Change date', size=(12,1), target='-SCAL-', pad=None, key='-SCAL1-', format=('%Y-%m-%d')),
-             sg.Text('Start date', size=(7,1)), sg.In(size=(10,1), enable_events=True ,key='-ECAL-', default_text='2022-12-06'), 
+             sg.Text('End date', size=(7,1)), sg.In(size=(10,1), enable_events=True ,key='-ECAL-', default_text='2022-12-06'), 
                 sg.CalendarButton('Change date', size=(12,1), target='-ECAL-', pad=None, key='-ECAL1-', format=('%Y-%m-%d'))
             ],
             [sg.Text('Smart Meter Data file', size=(24,1)), sg.In(size=(25,1), enable_events=True ,key='-C_FOLDER-'), sg.FileBrowse()],
