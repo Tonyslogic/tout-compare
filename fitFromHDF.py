@@ -1,21 +1,8 @@
-import logging
-import json
 import os
-import sys
-import sqlite3
-from sqlite3 import Error
 import datetime
-from dateutil.relativedelta import *
 
 import PySimpleGUI as sg
 import pandas as pd 
-
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('[%(asctime)s] %(levelname)s [%(filename)s.%(funcName)s:%(lineno)d] %(message)s', datefmt='%a, %d %b %Y %H:%M:%S')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 def _create_rows(smartMeterData):
     activeImport = []
@@ -23,13 +10,9 @@ def _create_rows(smartMeterData):
     valueKey = "Read Value"
     typeKey = "Read Type"
     dateKey = "Read Date & Time"
-
     importType = "Active Import Interval (kW)"
     exportType = "Active Export Interval (kW)"
 
-    DBNormalPV = 0
-    delta = datetime.timedelta(minutes=5)
-    
     for _, row in smartMeterData.iterrows():
         if row[typeKey] == importType:
             pass
@@ -42,11 +25,10 @@ def _create_rows(smartMeterData):
     return activeImport, activeExport
 
 def _getSmartMeterFilename():
-    
     smartMeterFile = None
     sDate = '2022-03-08'
     eDate = '2022-12-06'
-    rate = '14'
+    rate = '21'
 
     left_col = [
             [sg.Text('Log into ESBN account (https://www.esbnetworks.ie/existing-connections/meters-and-readings/my-smart-data).  Scroll down to "Download HDF". Click on that link and note where you save the file.', size=(85,3))],
@@ -62,7 +44,7 @@ def _getSmartMeterFilename():
             [sg.Button('Calculate', key='-CONFIG_OK-', disabled=True, size=(15,1)), sg.Button('Close', key='-CLOSE-', size=(15,1)) ]
     ]
     layout = [[sg.Column(left_col, element_justification='l')]]    
-    window = sg.Window('ESBN Smart Meter Data import', layout,resizable=True)
+    window = sg.Window('ESBN Smart Meter Data (HDF) Export Calculator', layout,resizable=True)
     
     while True:
         event, values = window.read()
@@ -89,7 +71,7 @@ def main():
     if smartMeterFile is None: return
 
     smartMeterData = pd.read_csv(smartMeterFile)
-    activeImport, activeExport = _create_rows(smartMeterData)
+    _, activeExport = _create_rows(smartMeterData)
     df = pd.DataFrame(activeExport, columns =['Date', 'Export'])
 
     
@@ -103,7 +85,7 @@ def main():
     for _, row in df2.iterrows():
         if start <= row['Date'] <= end:
             totalExport += row['Export']
-    print ("Total kWh exported From", begin, "to", finish, ":", '%.2f' % (totalExport))
+    print ("Total kWh exported from", begin, "to", finish, ":", '%.2f' % (totalExport))
     print ("Export value: €", '%.2f' % (totalExport*int(cents)/100))
     
 if __name__ == "__main__":
