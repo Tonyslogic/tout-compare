@@ -159,7 +159,6 @@ def _renderCarCharge(carCharge):
         
     return window
 
-
 def _editCarCharge(carCharge):
     oldCarCharge = copy.deepcopy(carCharge)
     ccWindow = _renderCarCharge(carCharge)
@@ -208,6 +207,110 @@ def _editCarCharge(carCharge):
             ccWindow.close()
             break
     return carCharge
+  
+def _renderImmersionSchedule(immersionSchedule):
+    left_col = []
+    left_col.append([sg.Text('Immersion scheduling allows you to explore the impacts of charging a car at various times. Times, days and months are used to apply additional load.', size=(150,2))])
+    left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
+    for i, schedule in enumerate(immersionSchedule):
+        left_col.append([
+            sg.Text('Begin charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_BEGIN' + str(i), default_text=schedule["begin"]),
+            sg.Text('End charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_END' + str(i), default_text=schedule["end"]),
+            sg.Text('Immersion rating (KWH)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_STOP' + str(i), default_text=schedule["draw"])
+            ])
+        left_col.append([
+            sg.Text('Effective water volume (l)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-IS_CAPACITY' + str(i), default_text=schedule["capacity"]),
+            sg.Text('Intake temp (C)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-IS_INTAKE' + str(i), default_text=schedule["intake"]),
+            sg.Text('Target temp (C)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-IS_TARGET' + str(i), default_text=schedule["target"])
+            ])
+        left_col.append([
+            sg.Text('Applicable months:', size=(25,1)),
+            sg.Checkbox('Jan', size=(5,1), default=1 in schedule["months"], key='-CC_MONTH_1' + str(i)),
+            sg.Checkbox('Feb', size=(5,1), default=2 in schedule["months"], key='-CC_MONTH_2' + str(i)),
+            sg.Checkbox('Mar', size=(5,1), default=3 in schedule["months"], key='-CC_MONTH_3' + str(i)),
+            sg.Checkbox('Apr', size=(5,1), default=4 in schedule["months"], key='-CC_MONTH_4' + str(i)),
+            sg.Checkbox('May', size=(5,1), default=5 in schedule["months"], key='-CC_MONTH_5' + str(i)),
+            sg.Checkbox('Jun', size=(5,1), default=6 in schedule["months"], key='-CC_MONTH_6' + str(i)),
+            sg.Checkbox('Jul', size=(5,1), default=7 in schedule["months"], key='-CC_MONTH_7' + str(i)),
+            sg.Checkbox('Aug', size=(5,1), default=8 in schedule["months"], key='-CC_MONTH_8' + str(i)),
+            sg.Checkbox('Sep', size=(5,1), default=9 in schedule["months"], key='-CC_MONTH_9' + str(i)),
+            sg.Checkbox('Oct', size=(5,1), default=10 in schedule["months"], key='-CC_MONTH_A' + str(i)),
+            sg.Checkbox('Nov', size=(5,1), default=11 in schedule["months"], key='-CC_MONTH_B' + str(i)),
+            sg.Checkbox('Dec', size=(5,1), default=12 in schedule["months"], key='-CC_MONTH_C' + str(i)),
+            sg.Button('Del', size=(6,1), key='-DEL_CC_CFG-' + str(i))
+        ])
+        left_col.append([
+            sg.Text('Applicable days:', size=(25,1)),
+            sg.Checkbox('Sun', size=(5,1), default=0 in schedule["days"], key='-CC_DAY_0' + str(i)),
+            sg.Checkbox('Mon', size=(5,1), default=1 in schedule["days"], key='-CC_DAY_1' + str(i)),
+            sg.Checkbox('Tue', size=(5,1), default=2 in schedule["days"], key='-CC_DAY_2' + str(i)),
+            sg.Checkbox('Wed', size=(5,1), default=3 in schedule["days"], key='-CC_DAY_3' + str(i)),
+            sg.Checkbox('Thu', size=(5,1), default=4 in schedule["days"], key='-CC_DAY_4' + str(i)),
+            sg.Checkbox('Fri', size=(5,1), default=5 in schedule["days"], key='-CC_DAY_5' + str(i)),
+            sg.Checkbox('Sat', size=(5,1), default=6 in schedule["days"], key='-CC_DAY_6' + str(i))
+        ])
+        left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
+    left_col.append([sg.Button('Add another immersion schedule entry', key='-ADD_CC-')])
+    left_col.append([sg.Button('Done editing the immersion schedule', key='-UPDATE_CC-')])
+    layout = [[sg.Column(left_col, element_justification='l')]]    
+    window = sg.Window('Immersion schedule editor', layout,resizable=True)
+        
+    return window
+
+def _editImmersionSchedule(immersionSchedule):
+    oldCarCharge = copy.deepcopy(immersionSchedule)
+    ccWindow = _renderImmersionSchedule(immersionSchedule)
+    
+    while True:
+        event, values = ccWindow.read()
+        # print(event)
+        if event in (sg.WIN_CLOSED, 'Exit'): 
+            immersionSchedule = oldCarCharge
+            break
+        if str(event).startswith('-DEL_CC_CFG'):
+            index = int(event[-1])
+            del immersionSchedule[index]
+            ccWindow.close()
+            ccWindow = _renderImmersionSchedule(immersionSchedule)
+        if event == '-ADD_CC-': 
+            immersionSchedule.append({"draw": 2.5, "begin": 3, "end": 6, "months": [1,2,3,4,5,6,7,8,9,10,11,12], "days": [0,1,2,3,4,5,6], "intake": 10, "target": 75, "capacity": 165})
+            ccWindow.close()
+            ccWindow = _renderImmersionSchedule(immersionSchedule)
+        if event == '-UPDATE_CC-':
+            newCarCharge = []
+            for i, _ in enumerate(immersionSchedule):
+                charge = {}
+                months = [] #[1,2,3,4,5,6,7,8,9,10,11,12]
+                days = [] #[0,1,2,3,4,5,6]
+                # print (values)
+                for key, value in values.items():
+                    if str(key).endswith(str(i)):
+                        if str(key).startswith('-CC_MONTH_'):
+                            if value:
+                                months.append(int(key[-2],16))
+                        if str(key).startswith('-CC_DAY_'):
+                            if value:
+                                days.append(int(key[-2]))
+                        if str(key).startswith('-CC_BEGIN'):
+                            charge["begin"] = int(value)
+                        if str(key).startswith('-CC_END'):
+                            charge["end"] = int(value)
+                        if str(key).startswith('-CC_STOP'):
+                            charge["draw"] = float(value)
+                        if str(key).startswith('-IS_CAPACITY'):
+                            charge["capacity"] = float(value)
+                        if str(key).startswith('-IS_INTAKE'):
+                            charge["intake"] = float(value)
+                        if str(key).startswith('-IS_TARGET'):
+                            charge["target"] = float(value)
+                charge["months"] = months
+                charge["days"] = days
+                newCarCharge.append(charge)
+                immersionSchedule = newCarCharge
+            # print(carCharge)
+            ccWindow.close()
+            break
+    return immersionSchedule
 
 def _renderDivert(divert):
     left_col = []
@@ -326,7 +429,8 @@ def _renderOneScenario(scenario):
             [sg.Text('Battery size (KWH)', size=(35,1)), sg.In(size=(15,1), enable_events=True ,key='-SCENARIO_BATTERY-', default_text=bat)],
             [sg.Text('Number of panels', size=(35,1)), sg.In(size=(15,1), enable_events=True ,key='-SCENARIO_PANELS-', default_text=pan)],
             [sg.Text('Discharge stop (%)', size=(35,1)), sg.In(size=(15,1), enable_events=True ,key='-DISCHARGE_STOP-', default_text=stop)],
-            [sg.Button("Load shifting", size=(15,1), key='-EDIT_LOAD_SHIFT-'), sg.Button("Car charging", size=(15,1), key='-EDIT_CAR_CHARGING-'), sg.Button("Diverters", size=(15,1), key='-EDIT_DIVERT-')],
+            [sg.Button("Load shifting", size=(22,1), key='-EDIT_LOAD_SHIFT-'), sg.Button("Diverters", size=(22,1), key='-EDIT_DIVERT-')],
+            [sg.Button("Car charging", size=(22,1), key='-EDIT_CAR_CHARGING-'), sg.Button("Immersion schedule", size=(22,1), key='-EDIT_HW_SCHEDULE-')],
             [sg.Text('===================================================', size=(50,1))],
             [sg.Button('Done editing scenario', key='-UPDATE_SCENARIO-')]
     ]
@@ -341,6 +445,9 @@ def _editScenario(scenario):
     except: pass
     carCharge = []
     try: carCharge = scenario["CarCharge"]
+    except: pass
+    scheduleImmersion = []
+    try: scheduleImmersion = scenario["ScheduleImmersion"]
     except: pass
     divert = {}
     try: divert = scenario["Divert"]
@@ -361,6 +468,9 @@ def _editScenario(scenario):
             if event == '-EDIT_CAR_CHARGING-': 
                 carCharge = _editCarCharge(carCharge)
                 scenario["CarCharge"] = carCharge
+            if event == '-EDIT_HW_SCHEDULE-': 
+                scheduleImmersion = _editImmersionSchedule(scheduleImmersion)
+                scenario["ScheduleImmersion"] = scheduleImmersion
             if event == '-EDIT_DIVERT-': 
                 divert = _editDivert(divert)
                 scenario["Divert"] = divert

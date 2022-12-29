@@ -32,7 +32,7 @@ def _getSmartMeterFilename():
 
     left_col = [
             [sg.Text('Log into ESBN account (https://www.esbnetworks.ie/existing-connections/meters-and-readings/my-smart-data).  Scroll down to "Download HDF". Click on that link and note where you save the file.', size=(85,3))],
-            [sg.Text('Use the file selector to locate the file and click "Load', size=(85,1))],
+            [sg.Text('Use the file selector to locate the file and click "Calculate"', size=(85,1))],
             [sg.Text('====================================================================================', size=(85,1))],
             [sg.Text("Rate (cents)", size=(9,1)), sg.In(size=(5,1), enable_events=True, key='-RATE-', default_text='21'),
              sg.Text('Start date', size=(7,1)), sg.In(size=(10,1), enable_events=True ,key='-SCAL-', default_text='2022-03-08'), 

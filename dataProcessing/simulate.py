@@ -34,6 +34,7 @@ FEED_MODIFIER = 1
 BUY_MODIFIER = 1
 LOAD_SHIFT = dict()
 CAR_CHARGE = dict()
+IMMERSION_SCHEDULE = dict()
 PV_GEN_MODIFIER = 1
 ORIGINAL_PANEL_COUNT = 14
 MAX_INVERTER_LOAD = 0.41666666
@@ -128,19 +129,30 @@ def _getCarLoad(date, dow, mod):
         pass 
     return carLoad
 
+def _getImmersionLoad(date, dow, mod, dailyDiversionTotals):
+    ensureDateTempInDailyDiversions(date, dailyDiversionTotals)
+    inputTemp = dailyDiversionTotals[date]["HWTemp"]
+
+    immersionLoad = 0
+    month = int(date.split('-')[1])
+    
+    try:
+        ism = IMMERSION_SCHEDULE[month]
+        isday = ism[dow]
+        if isday[0] < mod < isday[1]:
+            # 0.begin, 1.end, 2.draw, 3.intake, 4.target, 5.capacity
+            # The most that could be drawn (kWH) to get to the target temp
+            maxLoad = (isday[5] * 1000) * 4.2 * (isday[4] - inputTemp)
+            immersionLoad = min(isday[2], maxLoad)
+            dailyDiversionTotals[date]["HWTemp"] = ((immersionLoad * 3600000) / (isday[5] * 4200)) + inputTemp
+    except KeyError:
+        pass 
+    return immersionLoad
+
 def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
-    diversion = 0
     hw_d = 0
     ev_d = 0
-    if date not in dailyDiversionTotals:
-        previouaDate = datetime.datetime.strftime((datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)), '%Y-%m-%d')
-        previousDateTemp = 15
-        try: 
-            # print (date, dailyDiversionTotals[previouaDate])    
-            previousDateTemp = DIVERT["HWD"]["intake"]
-            previousDateTemp = dailyDiversionTotals[previouaDate]["HWTemp"]
-        except: pass
-        dailyDiversionTotals[date] = {"HW": 0, "EV": 0, "HWTemp": previousDateTemp}
+    ensureDateTempInDailyDiversions(date, dailyDiversionTotals)
 
     inputTemp = dailyDiversionTotals[date]["HWTemp"]
 
@@ -191,33 +203,46 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
     if DIVERT["HWD"]["active"]: dailyDiversionTotals[date]["HWTemp"] = ((hw_d * 3600000) / (tank * 4200)) + inputTemp
     
     dailyDiversionTotals[date]["EV"] += ev_d
-    # diversion = hw_d + ev_d
-
+    
     return hw_d, ev_d 
+
+def ensureDateTempInDailyDiversions(date, dailyDiversionTotals):
+    if date not in dailyDiversionTotals:
+        previouaDate = datetime.datetime.strftime((datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)), '%Y-%m-%d')
+        previousDateTemp = 15
+        try: 
+            # print (date, dailyDiversionTotals[previouaDate])    
+            previousDateTemp = DIVERT["HWD"]["intake"]
+            previousDateTemp = dailyDiversionTotals[previouaDate]["HWTemp"]
+        except: pass
+        dailyDiversionTotals[date] = {"HW": 0, "EV": 0, "HWTemp": previousDateTemp}
 
 def _simulate(df, start, finish):
     res = []
     daysInSim = finish - start
-    totals = {"totalFeed": 0, "totalBuy": 0, "totalEV": 0, "totalHWDiv": 0, "totalHWDNeed": 0, "totalEVDiv": 0}
+    totals = {"totalFeed": 0, "totalBuy": 0, "totalEV": 0, "totalHWDiv": 0, "totalHWDNeed": 0, "totalEVDiv": 0, "totalImmersionScehdule": 0}
     dailyDiversionTotals = {}
     newSOC = STATE_OF_CHARGE_KWH
 
     for r in list(zip(df['NormalLoad'], df['NormalPV'], df['Date'], df['MinuteOfDay'], df['DayOfWeek'])):
         if start <= datetime.datetime.strptime(r[2], '%Y-%m-%d') <= finish:
             cfg, cfgload, newSOC = _getCFG(r[2], r[3], newSOC) # Ignores using solar first if there is spare capacity, so processOneRow does this
-            # TODO: Add the car load here
+            # Add the car load here
             carload = _getCarLoad(r[2], r[4], r[3])
+            # schedule immersion (Date, DOW, MOD, diversions[date][HWT])
+            immersionLoad = _getImmersionLoad(r[2], r[4], r[3], dailyDiversionTotals)
             # newSOC, feed, buy = _processOneRow(soc, load, pv, cfg):
-            newSOC, feed, buy, pvToCharge, pvToLoad, batToLoad = _processOneRow(newSOC, r[0] + cfgload + carload, r[1], cfg)
+            newSOC, feed, buy, pvToCharge, pvToLoad, batToLoad = _processOneRow(newSOC, r[0] + cfgload + carload + immersionLoad, r[1], cfg)
             # see if there any diversions in place, and reduce feed. Track dailymax EV and daily usage for water
             hw_d, ev_d = _divert(feed, r[2], r[3], r[4], dailyDiversionTotals)
             feed = feed - (hw_d + ev_d)
             hwt = dailyDiversionTotals[r[2]]["HWTemp"]
             # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, pvToCharge, pvToLoad, batToLoad, pv
-            res.append((r[2], r[3], r[4], feed, buy, newSOC, carload, hwt, hw_d, ev_d, pvToCharge, pvToLoad, batToLoad, r[1])) 
+            res.append((r[2], r[3], r[4], feed, buy, newSOC, carload, hwt, hw_d, ev_d, pvToCharge, pvToLoad, batToLoad, r[1], immersionLoad)) 
             totals["totalFeed"] += feed
             totals["totalBuy"] += buy
             totals["totalEV"] += carload
+            totals["totalImmersionScehdule"] += immersionLoad
             totals["totalHWDiv"] += hw_d
             totals["totalEVDiv"] += ev_d
             if DIVERT["HWD"]["active"]  and r[3] == 0:
@@ -309,6 +334,22 @@ def _setCarCharge(carCharge_c):
             for d in config["days"]:
                 days[d] = (begin * 60, end * 60, draw / 12)
             CAR_CHARGE[m] = days
+
+def _setImmersionSchedule(immersionSchedule_c):
+    global IMMERSION_SCHEDULE
+    IMMERSION_SCHEDULE = dict()
+    for config in immersionSchedule_c:
+        draw = config["draw"]
+        begin = config["begin"]
+        end = config["end"]
+        intake = config["intake"]
+        target = config["target"]
+        capacity = config["capacity"]
+        for m in config["months"]:
+            days = dict()
+            for d in config["days"]:
+                days[d] = (begin * 60, end * 60, draw / 12, intake, target, capacity)
+            IMMERSION_SCHEDULE[m] = days
 
 def _setLoadShift(cfg_c):
     global LOAD_SHIFT
@@ -462,6 +503,9 @@ def _loadScenario(scenario):
     
     carCharge_c = scenario["CarCharge"]
     _setCarCharge(carCharge_c)
+    
+    immersionSchedule_c = scenario["ScheduleImmersion"]
+    _setImmersionSchedule(immersionSchedule_c)
 
     diversion_c = {"HWD": {"active": False}, "EVD": {"active": False}}
     try: 
@@ -602,7 +646,7 @@ def _saveScenario(dbFile, md5, scenario, begin, end):
     return ret
 
 def _saveScenarioData(dbFile, scenarioID, simulation_output):
-    # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, pvToCharge, pvToLoad, batToLoad, pv
+    # Date, MOD, DOW, feed, buy, soc, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, pvToCharge, pvToLoad, batToLoad, pv, immersionLoad
     conn = None
     try:
         conn = sqlite3.connect(dbFile)
@@ -632,11 +676,12 @@ def _saveScenarioData(dbFile, scenarioID, simulation_output):
                         pvToCharge REAL    NOT NULL, \
                         pvToLoad REAL    NOT NULL, \
                         batToLoad REAL    NOT NULL, \
-                        pv REAL NOT NULL \
+                        pv REAL NOT NULL, \
+                        immersionLoad REAL    NOT NULL \
                         );")
         conn.commit()
         c = conn.cursor()
-        sql = "INSERT INTO scenariodata VALUES(" + str(scenarioID) + ",?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
+        sql = "INSERT INTO scenariodata VALUES(" + str(scenarioID) + ",?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
         c.executemany(sql, simulation_output)
         conn.commit()
         conn.close()
@@ -647,7 +692,7 @@ def _saveScenarioData(dbFile, scenarioID, simulation_output):
 
 def _saveTotals(dbFile, scenarioID, totals):
     # totals = {"totalFeed": 0, "totalBuy": 0, "totalEV": 0, "totalHWDiv": 0, "totalHWDNeed": 0, "totalEVDiv": 0}
-    tots = [totals["totalFeed"], totals["totalBuy"], totals["totalEV"], totals["totalHWDiv"], totals["totalHWDNeed"], totals["totalEVDiv"]]
+    tots = [totals["totalFeed"], totals["totalBuy"], totals["totalEV"], totals["totalHWDiv"], totals["totalHWDNeed"], totals["totalEVDiv"], totals["totalImmersionScehdule"]]
     conn = None
     try:
         conn = sqlite3.connect(dbFile)
@@ -658,11 +703,12 @@ def _saveTotals(dbFile, scenarioID, totals):
                         totalEV REAL NOT NULL, \
                         totalHWDiv REAL NOT NULL, \
                         totalHWDNeed REAL NOT NULL, \
-                        totalEVDiv REAL NOT NULL \
+                        totalEVDiv REAL NOT NULL, \
+                        totalImmersionSchedule REAL NOT NULL \
                         );")
         conn.commit()
         c = conn.cursor()
-        sql = "INSERT INTO scenarioTotals VALUES(" + str(scenarioID) + ",?,?,?,?,?,?);"
+        sql = "INSERT INTO scenarioTotals VALUES(" + str(scenarioID) + ",?,?,?,?,?,?,?);"
         c.execute(sql, tots)
         conn.commit()
         conn.close()
