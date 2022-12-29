@@ -351,10 +351,10 @@ def _simDetails(dbFile, sim, title):
 
 def _simDetailExplore(dbFile, sim, title):
     # sim: name, id, start, duration
-    sql_line = Template("""SELECT Date || ' ' || substr('00'|| CAST(MinuteOfDay / 60 AS TEXT), -2, 2) || ':' ||  substr('00'|| CAST(MinuteOfDay % 60 AS TEXT), -2, 2) AS idx, Buy, Feed, SOC, pvToCharge, pvToLoad, pv, batToLoad, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, Load FROM scenariodata, (SELECT Date as D, MinuteOfDay as M, NormalLoad as Load FROM dailystats) AS DS WHERE scenarioID = $ID AND Date IN ('$PREV', '$DAY', '$NEXT') AND DS.D = Date AND DS.M = MinuteOfDay """)
+    sql_line = Template("""SELECT Date || ' ' || substr('00'|| CAST(MinuteOfDay / 60 AS TEXT), -2, 2) || ':' ||  substr('00'|| CAST(MinuteOfDay % 60 AS TEXT), -2, 2) AS idx, Buy, Feed, SOC, pvToCharge, pvToLoad, pv, batToLoad, DirectEVcharge, waterTemp, kWHDivToWater, kWHDivToEV, Load, immersionLoad FROM scenariodata, (SELECT Date as D, MinuteOfDay as M, NormalLoad as Load FROM dailystats) AS DS WHERE scenarioID = $ID AND Date IN ('$PREV', '$DAY', '$NEXT') AND DS.D = Date AND DS.M = MinuteOfDay """)
     sql_bar = Template("""
         SELECT substr('00'|| CAST(MinuteOfDay / 60 AS TEXT), -2, 2) AS HOUR, SUM(Buy) AS BUY, SUM(Feed) AS SELL, SUM(pvToCharge) AS PV2B, SUM(pvToLoad) AS PV2L, 
-            SUM(batToLoad) AS B2L, SUM(DirectEVcharge) AS EVC, SUM(kWHDivToWater) AS HWD, SUM(kWHDivToEV) AS EVD, SUM(Load) AS LOAD, SUM(pv) AS PV
+            SUM(batToLoad) AS B2L, SUM(DirectEVcharge) AS EVC, SUM(kWHDivToWater) AS HWD, SUM(kWHDivToEV) AS EVD, SUM(Load) AS LOAD, SUM(pv) AS PV, sum(immersionLoad) AS HWL
         FROM scenariodata, (SELECT Date as D, MinuteOfDay as M, NormalLoad as Load FROM dailystats) AS DS 
         WHERE scenarioID = $ID AND Date IN ('$DAY') 
         AND DS.D = Date AND DS.M = MinuteOfDay	
@@ -445,6 +445,11 @@ def _simDetailExplore(dbFile, sim, title):
             legnd.append("HWD")
             barList.append("HWD")
             barColours.append("brown")
+        if values['-SHOW_HWL-']: 
+            lines.append(ax.fill_between(df.index, 0, df['immersionLoad'], color='deeppink', alpha=0.5))
+            legnd.append("HWL")
+            barList.append("HWL")
+            barColours.append("deeppink")
         if values['-SHOW_LOAD-']: 
             lines.append(ax.fill_between(df.index, 0, df['Load'], color='cyan', alpha=0.5))
             legnd.append("Load")
@@ -501,6 +506,7 @@ def _simDetailExplore(dbFile, sim, title):
             sg.Checkbox('EVC', size=(6,1), default=False, key='-SHOW_EVC-', enable_events=True),
             sg.Checkbox('WTemp', size=(6,1), default=False, key='-SHOW_HWT-', enable_events=True),
             sg.Checkbox('HWD', size=(6,1), default=False, key='-SHOW_HWD-', enable_events=True),
+            sg.Checkbox('HWL', size=(6,1), default=False, key='-SHOW_HWL-', enable_events=True),
             sg.Checkbox('EVD', size=(6,1), default=False, key='-SHOW_EVD-', enable_events=True),
             ],
         [sg.Column(

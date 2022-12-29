@@ -205,7 +205,6 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
     return hw_d, ev_d 
 
 def reduceTemperature(minuteOfDay, inputTemp, tank, usage, intake):
-    start = inputTemp
     # calculate the water draw
     # Reduce the temp by 1/3 degree each hour
     if minuteOfDay % 60 == 0 :
@@ -219,7 +218,6 @@ def reduceTemperature(minuteOfDay, inputTemp, tank, usage, intake):
         m1 = tank - usage
         m2 = usage
         inputTemp = (m1 * inputTemp + m2 * intake) / (m1 + m2)
-        # print (start, inputTemp)
     inputTemp = max (intake, inputTemp)
     return inputTemp
 
