@@ -522,8 +522,8 @@ def _loadScenario(scenario):
     carCharge_c = scenario["CarCharge"]
     _setCarCharge(carCharge_c)
     
-    immersionSchedule_c = scenario["ScheduleImmersion"]
-    _setImmersionSchedule(immersionSchedule_c)
+    if "ScheduleImmersion" in scenario:
+        _setImmersionSchedule(scenario["ScheduleImmersion"])
 
     diversion_c = {"HWD": {"active": False}, "EVD": {"active": False}}
     try: 
