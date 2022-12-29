@@ -40,6 +40,13 @@ ORIGINAL_PANEL_COUNT = 14
 MAX_INVERTER_LOAD = 0.41666666
 DIVERT = dict()
 
+HWCAPACITY = 165
+HWUSAGE = 200
+HWINTAKE = 15
+HWTARGET = 75
+HWLOSS = 8
+HWRATE = 2.5
+
 CONFIG = "C:\\dev\\solar\\"
 
 logger = logging.getLogger()
@@ -132,13 +139,13 @@ def _getCarLoad(date, dow, mod):
 def _getImmersionLoad(date, dow, mod, dailyDiversionTotals):
 
     # Fail fast
-    if "intake" not in IMMERSION_SCHEDULE: return 0
+    if not IMMERSION_SCHEDULE: return 0
    
-    ensureDateTempInDailyDiversions(date, dailyDiversionTotals, IMMERSION_SCHEDULE["intake"])
+    ensureDateTempInDailyDiversions(date, dailyDiversionTotals, HWINTAKE)
     inputTemp = dailyDiversionTotals[date]["HWTemp"]
     if not DIVERT["HWD"]["active"]: 
         # we need to reduce the temperature here --params:(minuteOfDay, inputTemp, tank, usage, intake)
-        inputTemp = reduceTemperature(mod, inputTemp, IMMERSION_SCHEDULE["capacity"], IMMERSION_SCHEDULE["capacity"] * 0.8, IMMERSION_SCHEDULE["intake"])
+        inputTemp = reduceTemperature(mod, inputTemp)
         dailyDiversionTotals[date]["HWTemp"] = inputTemp
     
     immersionLoad = 0
@@ -150,9 +157,9 @@ def _getImmersionLoad(date, dow, mod, dailyDiversionTotals):
         if isday[0] < mod < isday[1]:
             # 0.begin, 1.end, 2.draw, 3.intake, 4.target, 5.capacity
             # The most that could be drawn (kWH) to get to the target temp
-            maxLoad = (isday[5] * 1000) * 4.2 * (isday[4] - inputTemp)
-            immersionLoad = max(0, min(isday[2], maxLoad))
-            dailyDiversionTotals[date]["HWTemp"] = ((immersionLoad * 3600000) / (isday[5] * 4200)) + inputTemp
+            maxLoad = (HWCAPACITY * 1000) * 4.2 * (HWTARGET - inputTemp)
+            immersionLoad = max(0, min(HWRATE/12, maxLoad))
+            dailyDiversionTotals[date]["HWTemp"] = ((immersionLoad * 3600000) / (HWCAPACITY * 4200)) + inputTemp
     except KeyError:
         print ("KeyError in _getImmersionLoad") 
     return immersionLoad
@@ -171,12 +178,11 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
         return hw_d, ev_d
     
     if DIVERT["HWD"]["active"]:
-        tank = DIVERT["HWD"]["tank"]
-        usage = DIVERT["HWD"]["usage"]
-        inputTemp = reduceTemperature(minuteOfDay, inputTemp, tank, usage, DIVERT["HWD"]["intake"])
+        tank = HWCAPACITY
+        inputTemp = reduceTemperature(minuteOfDay, inputTemp)
 
         # The most that could be drawn (kWH) to get to the target temp
-        hw_d = (tank * 1000) * 4.2 * (DIVERT["HWD"]["target"] - inputTemp)
+        hw_d = (tank * 1000) * 4.2 * (HWTARGET - inputTemp)
     
     if DIVERT["EVD"]["active"]:
         divertToEVSoFarToday = dailyDiversionTotals[date]["EV"]
@@ -204,27 +210,27 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
     
     return hw_d, ev_d 
 
-def reduceTemperature(minuteOfDay, inputTemp, tank, usage, intake):
+def reduceTemperature(minuteOfDay, inputTemp):
     # calculate the water draw
     # Reduce the temp by 1/3 degree each hour
+    usage = 0
     if minuteOfDay % 60 == 0 :
-        inputTemp = max (intake, inputTemp - 0.333333333333333)
+        inputTemp = max (HWINTAKE, inputTemp - HWLOSS/24)
             # Reduce the temp to cater for usage: 70%@08:00 10%@14:00 20%@20:00
         hour = minuteOfDay // 60
-        if hour == 8: usage = usage * 0.7
-        elif hour == 14: usage = usage * 0.1
-        elif hour == 20: usage = usage * 0.2
-        else: usage = 0
-        m1 = tank - usage
+        if hour == 8: usage = HWUSAGE * 0.7
+        elif hour == 14: usage = HWUSAGE * 0.1
+        elif hour == 20: usage = HWUSAGE * 0.2
+        m1 = HWCAPACITY - usage
         m2 = usage
-        inputTemp = (m1 * inputTemp + m2 * intake) / (m1 + m2)
-    inputTemp = max (intake, inputTemp)
+        inputTemp = (m1 * inputTemp + m2 * HWINTAKE) / (m1 + m2)
+    inputTemp = max (HWINTAKE, inputTemp)
     return inputTemp
 
 def ensureDateTempInDailyDiversions(date, dailyDiversionTotals, baseTemp):
     if date not in dailyDiversionTotals:
-        previouaDate = datetime.datetime.strftime((datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)), '%Y-%m-%d')
         previousDateTemp = 15
+        previouaDate = datetime.datetime.strftime((datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)), '%Y-%m-%d')
         try: 
             # print (date, dailyDiversionTotals[previouaDate])    
             previousDateTemp = baseTemp
@@ -290,11 +296,15 @@ def _loadProperties(configLocation):
     global CHARGING_LOSS_FACTOR
     global FEED_MODIFIER
     global BUY_MODIFIER
-    # global LOAD_SHIFT
-    # global CAR_CHARGE
     global PV_GEN_MODIFIER
     global ORIGINAL_PANEL_COUNT
     global MAX_INVERTER_LOAD
+    global HWCAPACITY
+    global HWUSAGE
+    global HWINTAKE
+    global HWTARGET
+    global HWLOSS
+    global HWRATE
 
     with open(os.path.join(configLocation, "SystemProperties.json"), 'r') as f:
         data = json.load(f)
@@ -309,6 +319,12 @@ def _loadProperties(configLocation):
     CHARGING_LOSS_FACTOR = 1 + data["(Dis)charge loss"] / 100
     ORIGINAL_PANEL_COUNT = data["Original panels"]
     MAX_INVERTER_LOAD  = data["Max Inverter load"] / 12
+    HWCAPACITY = data["HWCapacity"]
+    HWUSAGE = data["HWUsage"]
+    HWINTAKE = data["HWIntake"]
+    HWTARGET = data["HWTarget"]
+    HWLOSS = data["HWLoss"]
+    HWRATE = data["HWRate"]
     
     _getChargeModel(data)
     
@@ -319,8 +335,8 @@ def _setDiversions(diversion_c):
     DIVERT = diversion_c
     evdValidity = dict()
     if DIVERT["HWD"]["active"]:
-        gramsOfWater = DIVERT["HWD"]["usage"] * 1000
-        tempRise = DIVERT["HWD"]["target"] - DIVERT["HWD"]["intake"]
+        gramsOfWater = HWUSAGE * 1000
+        tempRise = HWTARGET - HWINTAKE
         # Specific heat capacity of water = 4.2 J / g.K
         # 1KWH = 3.6 MJ 
         DIVERT["HWD"]["KWH"] = (gramsOfWater * tempRise * 4.2) / 3600000 
@@ -354,21 +370,14 @@ def _setImmersionSchedule(immersionSchedule_c):
     global IMMERSION_SCHEDULE
     IMMERSION_SCHEDULE = dict()
     for config in immersionSchedule_c:
-        draw = config["draw"]
         begin = config["begin"]
         end = config["end"]
-        intake = config["intake"]
-        target = config["target"]
-        capacity = config["capacity"]
         for m in config["months"]:
             days = dict()
             for d in config["days"]:
-                days[d] = (begin * 60, end * 60, draw / 12, intake, target, capacity)
+                days[d] = (begin * 60, end * 60, HWRATE / 12)
             IMMERSION_SCHEDULE[m] = days
-        IMMERSION_SCHEDULE["intake"] = intake
-        IMMERSION_SCHEDULE["target"] = target
-        IMMERSION_SCHEDULE["capacity"] = capacity
-
+        
 def _setLoadShift(cfg_c):
     global LOAD_SHIFT
     LOAD_SHIFT = dict()
@@ -524,6 +533,9 @@ def _loadScenario(scenario):
     
     if "ScheduleImmersion" in scenario:
         _setImmersionSchedule(scenario["ScheduleImmersion"])
+    else:
+        global IMMERSION_SCHEDULE
+        IMMERSION_SCHEDULE = dict()
 
     diversion_c = {"HWD": {"active": False}, "EVD": {"active": False}}
     try: 

@@ -210,18 +210,13 @@ def _editCarCharge(carCharge):
   
 def _renderImmersionSchedule(immersionSchedule):
     left_col = []
-    left_col.append([sg.Text('Immersion scheduling allows you to explore the impacts of charging a car at various times. Times, days and months are used to apply additional load.', size=(150,2))])
+    left_col.append([sg.Text('Immersion scheduling allows you to explore the impacts of load shifting water heating. Schedule water heating times, days and months. The hot water configuraiton is in the system properties.', size=(150,1))])
     left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     for i, schedule in enumerate(immersionSchedule):
         left_col.append([
             sg.Text('Begin charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_BEGIN' + str(i), default_text=schedule["begin"]),
             sg.Text('End charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_END' + str(i), default_text=schedule["end"]),
-            sg.Text('Immersion rating (KWH)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_STOP' + str(i), default_text=schedule["draw"])
-            ])
-        left_col.append([
-            sg.Text('Effective water volume (l)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-IS_CAPACITY' + str(i), default_text=schedule["capacity"]),
-            sg.Text('Intake temp (C)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-IS_INTAKE' + str(i), default_text=schedule["intake"]),
-            sg.Text('Target temp (C)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-IS_TARGET' + str(i), default_text=schedule["target"])
+            # sg.Text('Immersion rating (KWH)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-CC_STOP' + str(i), default_text=schedule["draw"])
             ])
         left_col.append([
             sg.Text('Applicable months:', size=(25,1)),
@@ -273,7 +268,7 @@ def _editImmersionSchedule(immersionSchedule):
             ccWindow.close()
             ccWindow = _renderImmersionSchedule(immersionSchedule)
         if event == '-ADD_CC-': 
-            immersionSchedule.append({"draw": 2.5, "begin": 3, "end": 6, "months": [1,2,3,4,5,6,7,8,9,10,11,12], "days": [0,1,2,3,4,5,6], "intake": 10, "target": 75, "capacity": 165})
+            immersionSchedule.append({"begin": 3, "end": 6, "months": [1,2,3,4,5,6,7,8,9,10,11,12], "days": [0,1,2,3,4,5,6]})
             ccWindow.close()
             ccWindow = _renderImmersionSchedule(immersionSchedule)
         if event == '-UPDATE_CC-':
@@ -295,14 +290,6 @@ def _editImmersionSchedule(immersionSchedule):
                             charge["begin"] = int(value)
                         if str(key).startswith('-CC_END'):
                             charge["end"] = int(value)
-                        if str(key).startswith('-CC_STOP'):
-                            charge["draw"] = float(value)
-                        if str(key).startswith('-IS_CAPACITY'):
-                            charge["capacity"] = float(value)
-                        if str(key).startswith('-IS_INTAKE'):
-                            charge["intake"] = float(value)
-                        if str(key).startswith('-IS_TARGET'):
-                            charge["target"] = float(value)
                 charge["months"] = months
                 charge["days"] = days
                 newCarCharge.append(charge)
@@ -314,23 +301,18 @@ def _editImmersionSchedule(immersionSchedule):
 
 def _renderDivert(divert):
     left_col = []
-    hwd = {"active": False, "tank": 60, "target": 75, "usage": 500, "intake": 10}
+    hwd = {"active": False}
     try: hwd = divert["HWD"]
     except: pass
-    left_col.append([sg.Text('Diversion monitors the feed in to the grid. When feed in is detected, the available capacity is \'diverted\' to either a car or hot water heater. This avoids a poor Feed in Tariff, and helps to maximize self consumption.', size=(150,2))])
+    left_col.append([sg.Text('Diversion monitors the feed in to the grid. When feed in is detected, the available capacity is \'diverted\' to either a car or hot water heater. This avoids a poor Feed in Tariff, and helps to maximize self consumption.Hot water diversion assumes: that the daily usage is distributed 70% @ 08:00, 10% @ 14:00 and 20% @ 20:00; The hot water configuraiton is in the system properties.', size=(150,2))])
     left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
-    left_col.append([sg.Text('Hot water diversion assumes: that the daily usage is distributed 70% @ 08:00, 10% @ 14:00 and 20% @ 20:00; Tank heat loss is 1/3°C per hour.', size=(150,1))])
     left_col.append([sg.Checkbox('Enable Hot Water Diverter', size=(50,1), default=hwd["active"], key='-HWD-')])
-    left_col.append([sg.Text('Tank size (liter)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-TANK_SIZE-', default_text=hwd["tank"]),
-                    sg.Text('Target temp (°C)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-TARGET_TEMP-', default_text=hwd["target"])])
-    left_col.append([sg.Text('Daily usage (liter)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-USAGE-', default_text=hwd["usage"]),
-                    sg.Text('Intake temp (°C)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-INTAKE_TEMP-', default_text=hwd["intake"])])
     left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     evd = {"active": False, "ev1st": True, "begin": 11, "end": 16, "dailymax": 7.5, "months": [], "days": []}
     try: evd = divert["EVD"]
     except: pass
     left_col.append([sg.Checkbox('Enable Electric Vehicle Diverter', size=(50,1), default=evd["active"], key='-EVD-'),
-                    sg.Checkbox('Charge the EV before heating water', size=(50,1), default=evd["ev1st"], disabled=not evd["active"], key='-EV1ST-')])
+                    sg.Checkbox('Charge the EV before heating water', size=(50,1), default=evd["ev1st"], key='-EV1ST-')])
     left_col.append([
             sg.Text('Begin charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-EV_DIV_BEGIN-', default_text=evd["begin"]),
             sg.Text('End charging at (hr)', size=(25,1)), sg.In(size=(25,1), enable_events=True ,key='-EV_DIV_END-', default_text=evd["end"]),
@@ -383,10 +365,10 @@ def _editDivert(divert):
             divert = {"HWD": {}, "EVD": {}}
             try:
                 divert["HWD"]["active"] = values["-HWD-"]
-                divert["HWD"]["tank"] = int(values["-TANK_SIZE-"])
-                divert["HWD"]["target"] = int(values["-TARGET_TEMP-"])
-                divert["HWD"]["intake"] = int(values["-INTAKE_TEMP-"])
-                divert["HWD"]["usage"] = int(values["-USAGE-"])
+                # divert["HWD"]["tank"] = int(values["-TANK_SIZE-"])
+                # divert["HWD"]["target"] = int(values["-TARGET_TEMP-"])
+                # divert["HWD"]["intake"] = int(values["-INTAKE_TEMP-"])
+                # divert["HWD"]["usage"] = int(values["-USAGE-"])
                 
                 divert["EVD"]["active"] = values["-EVD-"]
                 divert["EVD"]["ev1st"] = values["-EV1ST-"]
