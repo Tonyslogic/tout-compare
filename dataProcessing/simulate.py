@@ -130,9 +130,17 @@ def _getCarLoad(date, dow, mod):
     return carLoad
 
 def _getImmersionLoad(date, dow, mod, dailyDiversionTotals):
-    ensureDateTempInDailyDiversions(date, dailyDiversionTotals)
-    inputTemp = dailyDiversionTotals[date]["HWTemp"]
 
+    # Fail fast
+    if "intake" not in IMMERSION_SCHEDULE: return 0
+   
+    ensureDateTempInDailyDiversions(date, dailyDiversionTotals, IMMERSION_SCHEDULE["intake"])
+    inputTemp = dailyDiversionTotals[date]["HWTemp"]
+    if not DIVERT["HWD"]["active"]: 
+        # we need to reduce the temperature here --params:(minuteOfDay, inputTemp, tank, usage, intake)
+        inputTemp = reduceTemperature(mod, inputTemp, IMMERSION_SCHEDULE["capacity"], IMMERSION_SCHEDULE["capacity"] * 0.8, IMMERSION_SCHEDULE["intake"])
+        dailyDiversionTotals[date]["HWTemp"] = inputTemp
+    
     immersionLoad = 0
     month = int(date.split('-')[1])
     
@@ -143,39 +151,29 @@ def _getImmersionLoad(date, dow, mod, dailyDiversionTotals):
             # 0.begin, 1.end, 2.draw, 3.intake, 4.target, 5.capacity
             # The most that could be drawn (kWH) to get to the target temp
             maxLoad = (isday[5] * 1000) * 4.2 * (isday[4] - inputTemp)
-            immersionLoad = min(isday[2], maxLoad)
+            immersionLoad = max(0, min(isday[2], maxLoad))
             dailyDiversionTotals[date]["HWTemp"] = ((immersionLoad * 3600000) / (isday[5] * 4200)) + inputTemp
     except KeyError:
-        pass 
+        print ("KeyError in _getImmersionLoad") 
     return immersionLoad
 
 def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
     hw_d = 0
     ev_d = 0
-    ensureDateTempInDailyDiversions(date, dailyDiversionTotals)
+    try: baseTemp = DIVERT["HWD"]["intake"]
+    except: baseTemp = 15
+    ensureDateTempInDailyDiversions(date, dailyDiversionTotals, baseTemp)
 
     inputTemp = dailyDiversionTotals[date]["HWTemp"]
 
     # Failfast
-    if not DIVERT["HWD"]["active"] and not DIVERT["EVD"]["active"]: return hw_d, ev_d
+    if not DIVERT["HWD"]["active"] and not DIVERT["EVD"]["active"]: 
+        return hw_d, ev_d
     
     if DIVERT["HWD"]["active"]:
         tank = DIVERT["HWD"]["tank"]
-        # calculate the water draw
-        # Reduce the temp by 1/3 degree each hour
         usage = DIVERT["HWD"]["usage"]
-        if minuteOfDay % 60 == 0 :
-            inputTemp = max (DIVERT["HWD"]["intake"], inputTemp - 0.333333333333333)
-            # Reduce the temp to cater for usage: 70%@08:00 10%@14:00 20%@20:00
-            hour = minuteOfDay // 60
-            if hour == 8: usage = usage * 0.7
-            elif hour == 14: usage = usage * 0.1
-            elif hour == 20: usage = usage * 0.2
-            else: usage = 0
-            m1 = tank - usage
-            m2 = usage
-            inputTemp = (m1 * inputTemp + m2 * DIVERT["HWD"]["intake"]) / (m1 + m2)
-        inputTemp = max (DIVERT["HWD"]["intake"], inputTemp)
+        inputTemp = reduceTemperature(minuteOfDay, inputTemp, tank, usage, DIVERT["HWD"]["intake"])
 
         # The most that could be drawn (kWH) to get to the target temp
         hw_d = (tank * 1000) * 4.2 * (DIVERT["HWD"]["target"] - inputTemp)
@@ -206,13 +204,32 @@ def _divert(availablefeed, date, minuteOfDay, dayOfWeek, dailyDiversionTotals):
     
     return hw_d, ev_d 
 
-def ensureDateTempInDailyDiversions(date, dailyDiversionTotals):
+def reduceTemperature(minuteOfDay, inputTemp, tank, usage, intake):
+    start = inputTemp
+    # calculate the water draw
+    # Reduce the temp by 1/3 degree each hour
+    if minuteOfDay % 60 == 0 :
+        inputTemp = max (intake, inputTemp - 0.333333333333333)
+            # Reduce the temp to cater for usage: 70%@08:00 10%@14:00 20%@20:00
+        hour = minuteOfDay // 60
+        if hour == 8: usage = usage * 0.7
+        elif hour == 14: usage = usage * 0.1
+        elif hour == 20: usage = usage * 0.2
+        else: usage = 0
+        m1 = tank - usage
+        m2 = usage
+        inputTemp = (m1 * inputTemp + m2 * intake) / (m1 + m2)
+        # print (start, inputTemp)
+    inputTemp = max (intake, inputTemp)
+    return inputTemp
+
+def ensureDateTempInDailyDiversions(date, dailyDiversionTotals, baseTemp):
     if date not in dailyDiversionTotals:
         previouaDate = datetime.datetime.strftime((datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=1)), '%Y-%m-%d')
         previousDateTemp = 15
         try: 
             # print (date, dailyDiversionTotals[previouaDate])    
-            previousDateTemp = DIVERT["HWD"]["intake"]
+            previousDateTemp = baseTemp
             previousDateTemp = dailyDiversionTotals[previouaDate]["HWTemp"]
         except: pass
         dailyDiversionTotals[date] = {"HW": 0, "EV": 0, "HWTemp": previousDateTemp}
@@ -350,6 +367,9 @@ def _setImmersionSchedule(immersionSchedule_c):
             for d in config["days"]:
                 days[d] = (begin * 60, end * 60, draw / 12, intake, target, capacity)
             IMMERSION_SCHEDULE[m] = days
+        IMMERSION_SCHEDULE["intake"] = intake
+        IMMERSION_SCHEDULE["target"] = target
+        IMMERSION_SCHEDULE["capacity"] = capacity
 
 def _setLoadShift(cfg_c):
     global LOAD_SHIFT
