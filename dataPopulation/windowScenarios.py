@@ -8,6 +8,8 @@ from sqlite3 import Error
 import PySimpleGUI as sg 
 from collections import defaultdict
 
+from dataPopulation.windowWater import setWaterConfig
+
 CONFIG = "C:\\dev\\solar\\"
 STORAGE = "C:\\dev\\solar\\"
 DBFILE = "SimData.db"
@@ -21,7 +23,7 @@ def _loadSysConfig():
         STATUS_SYS_CONFIG = True
     except:
         STATUS_SYS_CONFIG = False
-        data = {"Battery Size": 5.7, "Original panels": 14, "Discharge stop": 19.6, "Min excess": 0.008, "Max discharge": 0.225, "Max charge": 0.225, "Max Inverter load": 5.0, "Massage FeedIn": 87.5, "Massage Buy": 94.5, "(Dis)charge loss": 4, "ChargeModel": {"0": 30, "12": 100, "90": 10, "100": 0}}
+        data = {"Battery Size": 5.7, "Original panels": 14, "Discharge stop": 19.6, "Min excess": 0.008, "Max discharge": 0.225, "Max charge": 0.225, "Max Inverter load": 5.0, "Massage FeedIn": 87.5, "Massage Buy": 94.5, "(Dis)charge loss": 4, "ChargeModel": {"0": 30, "12": 100, "90": 10, "100": 0}, "HWCapacity": 165, "HWUsage": 200, "HWIntake": 15, "HWTarget": 75, "HWLoss": 8, "HWRate": 2.5, "HWUse": [(7,75),(14,10),(20,15)]}
     return STATUS_SYS_CONFIG, data
 
 def _updateSysConfig(data):
@@ -210,7 +212,7 @@ def _editCarCharge(carCharge):
   
 def _renderImmersionSchedule(immersionSchedule):
     left_col = []
-    left_col.append([sg.Text('Immersion scheduling allows you to explore the impacts of load shifting water heating. Schedule water heating times, days and months. The hot water configuraiton is in the system properties.', size=(150,1))])
+    left_col.append([sg.Text('Immersion scheduling allows you to explore the impacts of load shifting water heating. Schedule water heating times, days and months.', size=(150,1))])
     left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     for i, schedule in enumerate(immersionSchedule):
         left_col.append([
@@ -245,8 +247,9 @@ def _renderImmersionSchedule(immersionSchedule):
             sg.Checkbox('Sat', size=(5,1), default=6 in schedule["days"], key='-CC_DAY_6' + str(i))
         ])
         left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
-    left_col.append([sg.Button('Add another immersion schedule entry', key='-ADD_CC-')])
-    left_col.append([sg.Button('Done editing the immersion schedule', key='-UPDATE_CC-')])
+    left_col.append([sg.Button('Add another immersion schedule entry', key='-ADD_CC-'), 
+                     sg.Button('Set the hot water configuration', key='-SET_HWC-'), 
+                     sg.Button('Done editing the immersion schedule', key='-UPDATE_CC-')])
     layout = [[sg.Column(left_col, element_justification='l')]]    
     window = sg.Window('Immersion schedule editor', layout,resizable=True)
         
@@ -270,7 +273,9 @@ def _editImmersionSchedule(immersionSchedule):
         if event == '-ADD_CC-': 
             immersionSchedule.append({"begin": 3, "end": 6, "months": [1,2,3,4,5,6,7,8,9,10,11,12], "days": [0,1,2,3,4,5,6]})
             ccWindow.close()
-            ccWindow = _renderImmersionSchedule(immersionSchedule)
+            ccWindow = _renderImmersionSchedule(immersionSchedule) 
+        if event == '-SET_HWC-': 
+            setWaterConfig(CONFIG)
         if event == '-UPDATE_CC-':
             newCarCharge = []
             for i, _ in enumerate(immersionSchedule):
@@ -304,9 +309,10 @@ def _renderDivert(divert):
     hwd = {"active": False}
     try: hwd = divert["HWD"]
     except: pass
-    left_col.append([sg.Text('Diversion monitors the feed in to the grid. When feed in is detected, the available capacity is \'diverted\' to either a car or hot water heater. This avoids a poor Feed in Tariff, and helps to maximize self consumption.Hot water diversion assumes: that the daily usage is distributed 70% @ 08:00, 10% @ 14:00 and 20% @ 20:00; The hot water configuraiton is in the system properties.', size=(150,2))])
+    left_col.append([sg.Text('Diversion monitors the feed in to the grid. When feed in is detected, the available capacity is \'diverted\' to either a car or hot water heater. This avoids a poor Feed in Tariff, and helps to maximize self consumption.', size=(150,2))])
     left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
-    left_col.append([sg.Checkbox('Enable Hot Water Diverter', size=(50,1), default=hwd["active"], key='-HWD-')])
+    left_col.append([sg.Checkbox('Enable Hot Water Diverter', size=(50,1), default=hwd["active"], key='-HWD-'), 
+                     sg.Button('Set the hot water configuration', key='-SET_HWC-'), ])
     left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     evd = {"active": False, "ev1st": True, "begin": 11, "end": 16, "dailymax": 7.5, "months": [], "days": []}
     try: evd = divert["EVD"]
@@ -361,6 +367,8 @@ def _editDivert(divert):
         if event in (sg.WIN_CLOSED, 'Exit'): 
             divert = oldDivert
             break
+        if event == '-SET_HWC-': 
+            setWaterConfig(CONFIG)
         if event == '-UPDATE_DIVERTER-':
             divert = {"HWD": {}, "EVD": {}}
             try:

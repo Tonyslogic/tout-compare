@@ -218,9 +218,9 @@ def reduceTemperature(minuteOfDay, inputTemp):
         inputTemp = max (HWINTAKE, inputTemp - HWLOSS/24)
             # Reduce the temp to cater for usage: 70%@08:00 10%@14:00 20%@20:00
         hour = minuteOfDay // 60
-        if hour == 8: usage = HWUSAGE * 0.7
-        elif hour == 14: usage = HWUSAGE * 0.1
-        elif hour == 20: usage = HWUSAGE * 0.2
+        if hour == HWUSE[0][0]: usage = HWUSAGE * HWUSE[0][1]/100
+        elif hour == HWUSE[1][0]: usage = HWUSAGE * HWUSE[1][1]/100
+        elif hour == HWUSE[2][0]: usage = HWUSAGE * HWUSE[2][1]/100
         m1 = HWCAPACITY - usage
         m2 = usage
         inputTemp = (m1 * inputTemp + m2 * HWINTAKE) / (m1 + m2)
@@ -305,6 +305,7 @@ def _loadProperties(configLocation):
     global HWTARGET
     global HWLOSS
     global HWRATE
+    global HWUSE
 
     with open(os.path.join(configLocation, "SystemProperties.json"), 'r') as f:
         data = json.load(f)
@@ -325,6 +326,7 @@ def _loadProperties(configLocation):
     HWTARGET = data["HWTarget"]
     HWLOSS = data["HWLoss"]
     HWRATE = data["HWRate"]
+    HWUSE = data["HWUse"]
     
     _getChargeModel(data)
     

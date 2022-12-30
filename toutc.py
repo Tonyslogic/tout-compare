@@ -131,12 +131,12 @@ def _loadSysConfig():
             data = json.load(f)
         STATUS_SYS_CONFIG = True
         # upgrade handling
-        if "HWRate" not in data:
-            data.update({"HWCapacity": 165, "HWUsage": 200, "HWIntake": 15, "HWTarget": 75, "HWLoss": 8, "HWRate": 2.5})
+        if "HWUse" not in data:
+            data.update({"HWCapacity": 165, "HWUsage": 200, "HWIntake": 15, "HWTarget": 75, "HWLoss": 8, "HWRate": 2.5, "HWUse": [(7,75),(14,10),(20,15)]})
         MAIN_WINDOW['-SYS_CONFIG_STAT-'].update(value="System config found")
     except:
         STATUS_SYS_CONFIG = False
-        data = {"Battery Size": 5.7, "Original panels": 14, "Discharge stop": 19.6, "Min excess": 0.008, "Max discharge": 0.225, "Max charge": 0.225, "Max Inverter load": 5.0, "Massage FeedIn": 87.5, "Massage Buy": 94.5, "(Dis)charge loss": 4, "ChargeModel": {"0": 30, "12": 100, "90": 10, "100": 0}, "HWCapacity": 165, "HWUsage": 200, "HWIntake": 15, "HWTarget": 75, "HWLoss": 8, "HWRate": 2.5}
+        data = {"Battery Size": 5.7, "Original panels": 14, "Discharge stop": 19.6, "Min excess": 0.008, "Max discharge": 0.225, "Max charge": 0.225, "Max Inverter load": 5.0, "Massage FeedIn": 87.5, "Massage Buy": 94.5, "(Dis)charge loss": 4, "ChargeModel": {"0": 30, "12": 100, "90": 10, "100": 0}, "HWCapacity": 165, "HWUsage": 200, "HWIntake": 15, "HWTarget": 75, "HWLoss": 8, "HWRate": 2.5, "HWUse": [(7,75),(14,10),(20,15)]}
         MAIN_WINDOW['-SYS_CONFIG_STAT-'].update(value="System config not found")
     return data
 
@@ -189,31 +189,31 @@ def _getSysConfig():
             [sg.Text('Charge rate from 90-100 SOC (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_90_100-', default_text=cm["90"])],
             [sg.Text('Charge rate at 100 SOC (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-CM_100-', default_text=cm["100"])],
 
-            [sg.Text('===============================================================', size=(45,1))],
-            [sg.Text('Hot water tank configuration, size & behaviour.', size=(45,1))],
-            [sg.Text('Tank capacity (Liter).', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_TANK-', default_text=data["HWCapacity"])],
-            [sg.Text('Hot water daily usage (Liter)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_USAGE-', default_text=data["HWUsage"])],
-            [sg.Text('Water intake temperature (C)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_INTAKE-', default_text=data["HWIntake"])],
-            [sg.Text('Water target temperature (C)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_TARGET-', default_text=data["HWTarget"])],
-            [sg.Text('Hot water daily loss (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_LOSS-', default_text=data["HWLoss"])],
-            [sg.Text('Hot water immersion (kWh)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_RATE-', default_text=data["HWRate"])],
+            # [sg.Text('===============================================================', size=(45,1))],
+            # [sg.Text('Hot water tank configuration, size & behaviour.', size=(45,1))],
+            # [sg.Text('Tank capacity (Liter).', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_TANK-', default_text=data["HWCapacity"])],
+            # [sg.Text('Hot water daily usage (Liter)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_USAGE-', default_text=data["HWUsage"])],
+            # [sg.Text('Water intake temperature (C)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_INTAKE-', default_text=data["HWIntake"])],
+            # [sg.Text('Water target temperature (C)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_TARGET-', default_text=data["HWTarget"])],
+            # [sg.Text('Hot water daily loss (%)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_LOSS-', default_text=data["HWLoss"])],
+            # [sg.Text('Hot water immersion (kWh)', size=(35,1)), sg.In(size=(10,1), enable_events=True ,key='-HW_RATE-', default_text=data["HWRate"])],
             
             [sg.Button('Update', key='-UPDATE_SYS_CFG-')]
     ]
     # layout = [[sg.Column(left_col, element_justification='l')]]    
-    layout = [[sg.Column(left_col, element_justification='l', size=(400, 700), expand_x=True, expand_y=True, scrollable=True,  vertical_scroll_only=True)]]    
+    layout = [[sg.Column(left_col, element_justification='l', size=(400, 550), expand_x=True, expand_y=True, scrollable=True,  vertical_scroll_only=True)]]    
     window = sg.Window('Time of use comparison -- system config', layout,resizable=True)
         
     while True:
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Exit'): break
         try:
-            if event == '-HW_TANK-': data["HWCapacity"] = float(values['-HW_TANK-'])  
-            if event == '-HW_USAGE-': data["HWUsage"] = float(values['-HW_USAGE-'])  
-            if event == '-HW_INTAKE-': data["HWIntake"] = float(values['-HW_INTAKE-'])  
-            if event == '-HW_TARGET-': data["HWTarget"] = float(values['-HW_TARGET-'])  
-            if event == '-HW_LOSS-': data["HWLoss"] = float(values['-HW_LOSS-'])   
-            if event == '-HW_RATE-': data["HWRate"] = float(values['-HW_RATE-'])  
+            # if event == '-HW_TANK-': data["HWCapacity"] = float(values['-HW_TANK-'])  
+            # if event == '-HW_USAGE-': data["HWUsage"] = float(values['-HW_USAGE-'])  
+            # if event == '-HW_INTAKE-': data["HWIntake"] = float(values['-HW_INTAKE-'])  
+            # if event == '-HW_TARGET-': data["HWTarget"] = float(values['-HW_TARGET-'])  
+            # if event == '-HW_LOSS-': data["HWLoss"] = float(values['-HW_LOSS-'])   
+            # if event == '-HW_RATE-': data["HWRate"] = float(values['-HW_RATE-'])  
 
             if event == '-BATTERY_SIZE-': data["Battery Size"] = float(values['-BATTERY_SIZE-']) 
             if event == '-ORIGINAL_PANELS-': data["Original panels"] = int(values['-ORIGINAL_PANELS-'])
