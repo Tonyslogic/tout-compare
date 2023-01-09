@@ -450,18 +450,20 @@ def _buildRateLookup(rates):
         if startDOY > endDOY:
             doy = endDOY
             while doy <= 364:
-                lookup[doy] = innerLookup
+                if doy in lookup: lookup[doy].update(innerLookup)
+                else: lookup[doy] = innerLookup
                 doy += 1
             doy = 0
             while doy <= startDOY:
-                lookup[doy] = innerLookup
+                if doy in lookup: lookup[doy].update(innerLookup)
+                else: lookup[doy] = innerLookup
                 doy += 1
         else:
             doy = startDOY
             while doy <= endDOY:
-                lookup[doy] = innerLookup
+                if doy in lookup: lookup[doy].update(innerLookup)
+                else: lookup[doy] = innerLookup
                 doy += 1
-
     return lookup
 
 def _getRate(rateLookup, dow, mod, date):
