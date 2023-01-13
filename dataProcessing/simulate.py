@@ -112,14 +112,15 @@ def _getCFG(date, minuteOfDay, soc):
     newSOC = soc
     month = int(date.split('-')[1])
     try:
-        lsd = LOAD_SHIFT[month]
+        lsd_tuples = LOAD_SHIFT[month]
     except KeyError:
-        return cfg, extraLoad, newSOC    
-    if lsd[0] < minuteOfDay < lsd[1]:
-        cfg = True
-        freeCap = BATTERY_SIZE_KWH - soc
-        extraLoad = min(freeCap, _getMaxChargeForSOC(soc))
-        newSOC = soc + extraLoad
+        return cfg, extraLoad, newSOC 
+    for lsd in lsd_tuples:   
+        if lsd[0] < minuteOfDay < lsd[1]:
+            cfg = True
+            freeCap = BATTERY_SIZE_KWH - soc
+            extraLoad = min(freeCap, _getMaxChargeForSOC(soc))
+            newSOC = soc + extraLoad
 
     return cfg, extraLoad, newSOC
 
@@ -129,9 +130,10 @@ def _getCarLoad(date, dow, mod):
     
     try:
         ccm = CAR_CHARGE[month]
-        ccd = ccm[dow]
-        if ccd[0] < mod < ccd[1]:
-            carLoad = ccd[2]
+        ccd_tuples = ccm[dow]
+        for ccd in ccd_tuples:
+            if ccd[0] < mod < ccd[1]:
+                carLoad = ccd[2]
     except KeyError:
         pass 
     return carLoad
@@ -153,13 +155,14 @@ def _getImmersionLoad(date, dow, mod, dailyDiversionTotals):
     
     try:
         ism = IMMERSION_SCHEDULE[month]
-        isday = ism[dow]
-        if isday[0] < mod < isday[1]:
-            # 0.begin, 1.end, 2.draw, 3.intake, 4.target, 5.capacity
-            # The most that could be drawn (kWH) to get to the target temp
-            maxLoad = (HWCAPACITY * 1000) * 4.2 * (HWTARGET - inputTemp)
-            immersionLoad = max(0, min(HWRATE/12, maxLoad))
-            dailyDiversionTotals[date]["HWTemp"] = ((immersionLoad * 3600000) / (HWCAPACITY * 4200)) + inputTemp
+        isday_tuples = ism[dow]
+        for isday in isday_tuples:
+            if isday[0] < mod < isday[1]:
+                # 0.begin, 1.end, 2.draw, 3.intake, 4.target, 5.capacity
+                # The most that could be drawn (kWH) to get to the target temp
+                maxLoad = (HWCAPACITY * 1000) * 4.2 * (HWTARGET - inputTemp)
+                immersionLoad = max(0, min(HWRATE/12, maxLoad))
+                dailyDiversionTotals[date]["HWTemp"] = ((immersionLoad * 3600000) / (HWCAPACITY * 4200)) + inputTemp
     except KeyError:
         print ("KeyError in _getImmersionLoad") 
     return immersionLoad
@@ -362,11 +365,15 @@ def _setCarCharge(carCharge_c):
         draw = config["draw"]
         begin = config["begin"]
         end = config["end"]
+        activeTime = (begin * 60, end * 60, draw / 12)
         for m in config["months"]:
-            days = dict()
+            if m not in CAR_CHARGE: 
+                CAR_CHARGE[m] = dict()
             for d in config["days"]:
-                days[d] = (begin * 60, end * 60, draw / 12)
-            CAR_CHARGE[m] = days
+                if d not in CAR_CHARGE[m]:
+                    CAR_CHARGE[m][d] = [activeTime]
+                else: 
+                    CAR_CHARGE[m][d].append(activeTime)
 
 def _setImmersionSchedule(immersionSchedule_c):
     global IMMERSION_SCHEDULE
@@ -374,11 +381,15 @@ def _setImmersionSchedule(immersionSchedule_c):
     for config in immersionSchedule_c:
         begin = config["begin"]
         end = config["end"]
+        activeTime = (begin * 60, end * 60, HWRATE / 12)
         for m in config["months"]:
-            days = dict()
+            if m not in IMMERSION_SCHEDULE:
+                IMMERSION_SCHEDULE[m] = dict()
             for d in config["days"]:
-                days[d] = (begin * 60, end * 60, HWRATE / 12)
-            IMMERSION_SCHEDULE[m] = days
+                if d not in IMMERSION_SCHEDULE[m]:
+                    IMMERSION_SCHEDULE[m][d] = [activeTime]
+                else:
+                    IMMERSION_SCHEDULE[m][d].append(activeTime)
         
 def _setLoadShift(cfg_c):
     global LOAD_SHIFT
@@ -387,8 +398,12 @@ def _setLoadShift(cfg_c):
         stopAt = config["stop at"]
         begin = config["begin"]
         end = config["end"]
+        activeTime = (begin * 60, end * 60, stopAt * BATTERY_SIZE_KWH / 100)
         for m in config["months"]:
-            LOAD_SHIFT[m] = (begin * 60, end * 60, stopAt * BATTERY_SIZE_KWH / 100)
+            if m not in LOAD_SHIFT: 
+                LOAD_SHIFT[m] = [activeTime]
+            else:
+                LOAD_SHIFT[m].append(activeTime)
 
 def _updateChargeModel(configLocation):
     with open(os.path.join(configLocation, "SystemProperties.json"), 'r') as f:
