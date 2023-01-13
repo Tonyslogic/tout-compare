@@ -60,6 +60,17 @@ def _renderLoadShift(loadShift, batterySize):
             sg.Checkbox('Dec', size=(5,1), default=12 in shift["months"], key='-LS_MONTH_C' + str(i)),
             sg.Button('Del', size=(6,1), key='-DEL_LS_CFG-' + str(i))
         ])
+        if "days" not in shift: shift["days"] = [0,1,2,3,4,5,6]
+        left_col.append([
+            sg.Text('Applicable days:', size=(25,1)),
+            sg.Checkbox('Sun', size=(5,1), default=0 in shift["days"], key='-LS_DAY_0' + str(i)),
+            sg.Checkbox('Mon', size=(5,1), default=1 in shift["days"], key='-LS_DAY_1' + str(i)),
+            sg.Checkbox('Tue', size=(5,1), default=2 in shift["days"], key='-LS_DAY_2' + str(i)),
+            sg.Checkbox('Wed', size=(5,1), default=3 in shift["days"], key='-LS_DAY_3' + str(i)),
+            sg.Checkbox('Thu', size=(5,1), default=4 in shift["days"], key='-LS_DAY_4' + str(i)),
+            sg.Checkbox('Fri', size=(5,1), default=5 in shift["days"], key='-LS_DAY_5' + str(i)),
+            sg.Checkbox('Sat', size=(5,1), default=6 in shift["days"], key='-LS_DAY_6' + str(i))
+        ])
         left_col.append([sg.Text('======================================================================================================================================================', size=(150,1))])
     left_col.append([sg.Button('Add a load shift configuration', key='-ADD_LS-')]),
     left_col.append([sg.Button('Done editing load shift', key='-UPDATE_LS-')])
@@ -89,7 +100,7 @@ def _editLoadShift(loadShift, batterySize):
             lsWindow.close()
             lsWindow = _renderLoadShift(loadShift, batterySize)
         if event == '-ADD_LS-': 
-            loadShift.append({"stop at": 80, "begin": 2, "end": 4, "months": [1,2,3,4,5,6,7,8,9,10,11,12]})
+            loadShift.append({"stop at": 80, "begin": 2, "end": 4, "months": [1,2,3,4,5,6,7,8,9,10,11,12], "days": [0,1,2,3,4,5,6]})
             lsWindow.close()
             lsWindow = _renderLoadShift(loadShift, batterySize)
         if event == '-UPDATE_LS-':
@@ -97,12 +108,16 @@ def _editLoadShift(loadShift, batterySize):
             for i, _ in enumerate(loadShift):
                 shift = {}
                 months = [] #[1,2,3,4,5,6,7,8,9,10,11,12]
+                days = [] #[0,1,2,3,4,5,6]
                 # print (values)
                 for key, value in values.items():
                     if str(key).endswith(str(i)):
                         if str(key).startswith('-LS_MONTH_'):
                             if value:
                                 months.append(int(key[-2],16))
+                        if str(key).startswith('-LS_DAY_'):
+                            if value:
+                                days.append(int(key[-2]))
                         if str(key).startswith('-LS_BEGIN'):
                             shift["begin"] = int(value)
                         if str(key).startswith('-LS_END'):
@@ -110,6 +125,7 @@ def _editLoadShift(loadShift, batterySize):
                         if str(key).startswith('-LS_STOP'):
                             shift["stop at"] = int(value)
                 shift["months"] = months
+                shift["days"] = days
                 newLoadShift.append(shift)
                 loadShift = newLoadShift
             # print(loadShift)

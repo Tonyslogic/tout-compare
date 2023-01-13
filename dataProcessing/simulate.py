@@ -106,17 +106,17 @@ def _processOneRow(soc, load, pv, cfg):
 
     return newSOC, feed, buy, pvToCharge, pvToLoad, batToLoad
 
-def _getCFG(date, minuteOfDay, soc):
+def _getCFG(date, minuteOfDay, soc, dow):
     cfg = False
     extraLoad = 0
     newSOC = soc
     month = int(date.split('-')[1])
     try:
-        lsd_tuples = LOAD_SHIFT[month]
+        lsd_tuples = LOAD_SHIFT[month][dow]
     except KeyError:
         return cfg, extraLoad, newSOC 
     for lsd in lsd_tuples:   
-        if lsd[0] < minuteOfDay < lsd[1]:
+        if lsd[0] < minuteOfDay <= lsd[1]:
             cfg = True
             freeCap = BATTERY_SIZE_KWH - soc
             extraLoad = min(freeCap, _getMaxChargeForSOC(soc))
@@ -132,7 +132,7 @@ def _getCarLoad(date, dow, mod):
         ccm = CAR_CHARGE[month]
         ccd_tuples = ccm[dow]
         for ccd in ccd_tuples:
-            if ccd[0] < mod < ccd[1]:
+            if ccd[0] < mod <= ccd[1]:
                 carLoad = ccd[2]
     except KeyError:
         pass 
@@ -157,7 +157,7 @@ def _getImmersionLoad(date, dow, mod, dailyDiversionTotals):
         ism = IMMERSION_SCHEDULE[month]
         isday_tuples = ism[dow]
         for isday in isday_tuples:
-            if isday[0] < mod < isday[1]:
+            if isday[0] < mod <= isday[1]:
                 # 0.begin, 1.end, 2.draw, 3.intake, 4.target, 5.capacity
                 # The most that could be drawn (kWH) to get to the target temp
                 maxLoad = (HWCAPACITY * 1000) * 4.2 * (HWTARGET - inputTemp)
@@ -250,7 +250,7 @@ def _simulate(df, start, finish):
 
     for r in list(zip(df['NormalLoad'], df['NormalPV'], df['Date'], df['MinuteOfDay'], df['DayOfWeek'])):
         if start <= datetime.datetime.strptime(r[2], '%Y-%m-%d') <= finish:
-            cfg, cfgload, newSOC = _getCFG(r[2], r[3], newSOC) # Ignores using solar first if there is spare capacity, so processOneRow does this
+            cfg, cfgload, newSOC = _getCFG(r[2], r[3], newSOC, r[4]) # Ignores using solar first if there is spare capacity, so processOneRow does this
             # Add the car load here
             carload = _getCarLoad(r[2], r[4], r[3])
             # schedule immersion (Date, DOW, MOD, diversions[date][HWT])
@@ -401,9 +401,12 @@ def _setLoadShift(cfg_c):
         activeTime = (begin * 60, end * 60, stopAt * BATTERY_SIZE_KWH / 100)
         for m in config["months"]:
             if m not in LOAD_SHIFT: 
-                LOAD_SHIFT[m] = [activeTime]
-            else:
-                LOAD_SHIFT[m].append(activeTime)
+                LOAD_SHIFT[m] = dict()
+            for d in config["days"]:
+                if d not in LOAD_SHIFT[m]:
+                    LOAD_SHIFT[m][d] = [activeTime]
+                else:
+                    LOAD_SHIFT[m][d].append(activeTime)
 
 def _updateChargeModel(configLocation):
     with open(os.path.join(configLocation, "SystemProperties.json"), 'r') as f:
