@@ -398,6 +398,7 @@ def _setLoadShift(cfg_c):
         stopAt = config["stop at"]
         begin = config["begin"]
         end = config["end"]
+        if "days" not in config: config["days"] =  [0,1,2,3,4,5,6]
         activeTime = (begin * 60, end * 60, stopAt * BATTERY_SIZE_KWH / 100)
         for m in config["months"]:
             if m not in LOAD_SHIFT: 
