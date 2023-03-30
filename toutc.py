@@ -28,7 +28,7 @@ from dataPopulation.pvgis2db import guiPVgis
 from dataPopulation.demodefaults import DEMO_START, DEMO_ANNUAL, DEMO_BASE, DEMO_MONTHLYDIST, DEMO_DOWDIST, DEMO_HOURLYDIST, DEMO_RATES, DEMO_SYSTEM
 from dataPopulation.windowScenarios import getScenarios
 
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 MAIN_WINDOW = None
 
@@ -546,7 +546,7 @@ def _callSimulate():
             try: rateDate = combination[0]["LastUpdate"]
             except: rateDate = defaultRateDate
             rate = rate + " [" + rateDate + "]"
-            rateKey = '-RATE-'+ str(index)
+            rateKey = '-RATE-'+ str(index).zfill(2)
             rateDisabled = False
         scenario = "--"
         scenarioActive = False
@@ -556,7 +556,7 @@ def _callSimulate():
             scenario = combination[1]["Name"]
             try: scenarioActive = combination[1]["Active"]
             except: scenarioActive = True
-            scenarioKey = '-SCENARIO-'+ str(index)
+            scenarioKey = '-SCENARIO-'+ str(index).zfill(2)
             scenarioDisabled = False
         left_col.append([
             sg.Checkbox(rate, size=(47,1), default=rateActive, disabled=rateDisabled, enable_events=True, key=rateKey),
@@ -579,10 +579,10 @@ def _callSimulate():
             deemed = False
             for key, value in values.items():
                 if str(key).startswith('-RATE-'):
-                    rateIndex = int(key[-1])
+                    rateIndex = int(key[-2:])
                     rates[rateIndex]["Active"] = value
                 if str(key).startswith('-SCENARIO-'):
-                    scenarioIndex = int(key[-1])
+                    scenarioIndex = int(key[-2:])
                     scenarios[scenarioIndex]["Active"] = value
                 if str(key) == '-SAVE_SIM_OUTPUT-':
                     save = value
